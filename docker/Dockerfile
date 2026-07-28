@@ -17,10 +17,12 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont wget
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont wget \
+    && (test -x /usr/bin/chromium-browser || ln -sf /usr/bin/chromium /usr/bin/chromium-browser)
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 COPY package*.json ./
 COPY prisma ./prisma/

@@ -37,6 +37,7 @@ export class BrowserService implements OnModuleDestroy {
   private readonly engine: BrowserEngine;
   private readonly headless: boolean;
   private readonly poolSize: number;
+  private readonly executablePath?: string;
   private contextPool: BrowserContext[] = [];
   private poolIndex = 0;
 
@@ -44,19 +45,26 @@ export class BrowserService implements OnModuleDestroy {
     this.engine = this.configService.get<BrowserEngine>('search.browserEngine', 'playwright');
     this.headless = this.configService.get<boolean>('search.browserHeadless', true);
     this.poolSize = this.configService.get<number>('search.browserPoolSize', 5);
+    this.executablePath = this.configService.get<string>('search.browserExecutablePath');
+  }
+
+  private getLaunchOptions(): Parameters<typeof chromium.launch>[0] {
+    return {
+      headless: this.headless,
+      ...(this.executablePath ? { executablePath: this.executablePath } : {}),
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-gpu',
+      ],
+    };
   }
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser) {
-      this.browser = await chromium.launch({
-        headless: this.headless,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-blink-features=AutomationControlled',
-        ],
-      });
+      this.browser = await chromium.launch(this.getLaunchOptions());
 
       for (let i = 0; i < this.poolSize; i++) {
         const context = await this.createContext();
@@ -67,7 +75,7 @@ export class BrowserService implements OnModuleDestroy {
   }
 
   private async createContext(proxy?: string): Promise<BrowserContext> {
-    const browser = this.browser ?? (await chromium.launch({ headless: this.headless }));
+    const browser = this.browser ?? (await chromium.launch(this.getLaunchOptions()));
     const viewport = VIEWPORTS[Math.floor(Math.random() * VIEWPORTS.length)];
 
     return browser.newContext({

@@ -38,5 +38,9 @@ export const searchConfig = registerAs('search', () => ({
   browserEngine: process.env.BROWSER_ENGINE || 'playwright',
   browserHeadless: process.env.BROWSER_HEADLESS !== 'false',
   browserPoolSize: parseInt(process.env.BROWSER_POOL_SIZE || '5', 10),
+  browserExecutablePath:
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
+    process.env.PUPPETEER_EXECUTABLE_PATH ||
+    undefined,
   aiEnabled: process.env.AI_ENABLED === 'true',
 }));
