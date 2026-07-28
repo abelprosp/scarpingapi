@@ -11,6 +11,7 @@ COPY . .
 
 RUN npx prisma generate
 RUN npm run build
+RUN test -f dist/main.js || test -f dist/src/main.js
 
 FROM node:22-alpine AS production
 

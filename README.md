@@ -178,12 +178,26 @@ HTTP_PORT=8080
 
 ```bash
 git pull
-docker compose down
+docker compose down --remove-orphans
+cp .env.production.example .env   # se ainda não tiver
+nano .env                         # POSTGRES_PASSWORD, JWT_SECRET, API_PORT=8080
+
 docker compose up -d --build
 docker compose logs -f api
 ```
 
-As migrations rodam automaticamente no startup do container.
+A API fica em `http://SEU_IP:8080/api/v1` (porta configurável via `API_PORT`).
+
+O container **nginx** é opcional (`--profile bundled-nginx`). Se a porta 80 já estiver em uso na VPS, **não use o nginx do compose** — use o nginx/apache que já está instalado como reverse proxy:
+
+```nginx
+# /etc/nginx/sites-available/serper
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
 
 ### Kubernetes
 
