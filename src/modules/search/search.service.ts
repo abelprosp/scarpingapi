@@ -13,13 +13,22 @@ import { ParserFactory } from '../parser/parser.factory';
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { MetricsService } from '../../infrastructure/monitoring/metrics.service';
-import { BaseSearchDto } from './dto/search.dto';
+import { BaseSearchDto, MapsSearchDto, PlacesSearchDto, ImagesSearchDto, NewsSearchDto } from './dto/search.dto';
 import {
   SearchResponse,
   BatchSearchResponse,
   WebResult,
 } from './interfaces/search-result.interface';
 import { AuthenticatedUser } from '../../common/decorators/auth.decorator';
+import {
+  buildSearchUrl,
+  SearchUrlOptions,
+  supportsDuckDuckGoFallback,
+  supportsNominatimFallback,
+} from './builders/search-url.builder';
+import { NominatimProvider } from './providers/nominatim.provider';
+
+type SearchSource = 'google' | 'duckduckgo' | 'nominatim';
 
 @Injectable()
 export class SearchService {
@@ -35,6 +44,7 @@ export class SearchService {
     private readonly aiService: AiService,
     private readonly prisma: PrismaService,
     private readonly metrics: MetricsService,
+    private readonly nominatim: NominatimProvider,
   ) {
     this.creditsPerSearch = this.configService.get<number>('app.creditsPerSearch', 1);
   }
@@ -52,6 +62,7 @@ export class SearchService {
     const num = dto.num || 10;
     const page = dto.page || 1;
     const engine = dto.engine ?? this.configService.get<string>('search.defaultEngine') ?? 'google';
+    const urlOptions = this.extractUrlOptions(dto);
 
     if (!options?.skipBilling) {
       await this.checkCredits(user);
@@ -65,6 +76,12 @@ export class SearchService {
       device,
       page,
       num,
+      extra: {
+        lat: urlOptions.lat ?? 0,
+        lng: urlOptions.lng ?? 0,
+        radius: urlOptions.radius ?? 0,
+        placeType: urlOptions.placeType ?? '',
+      },
     });
 
     if (!dto.noCache) {
@@ -76,41 +93,62 @@ export class SearchService {
       }
     }
 
-    const searchUrl = this.buildSearchUrl(type, dto.q, gl, hl, page, num);
-    let { html, source } = await this.fetchWithRetry(searchUrl, gl, dto.q);
+    const searchUrl = buildSearchUrl(type, dto.q, gl, hl, page, num, urlOptions);
+    let source: SearchSource = 'google';
+    let html = '';
 
-    let response = await this.parseResults(type, html, num, {
-      q: dto.q,
-      gl,
-      hl,
-      engine: source === 'duckduckgo' ? 'duckduckgo' : engine,
-      page,
-      num,
-    }, source);
-
-    if (type === SearchType.WEB && source === 'google' && (!response.organic || response.organic.length === 0)) {
-      const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(dto.q)}`;
-      const ddgResponse = await fetch(ddgUrl, {
-        headers: {
-          'User-Agent': this.browserService.randomUserAgent(),
-          Accept: 'text/html',
-          'Accept-Language': 'pt-BR,pt;q=0.9',
-        },
+    try {
+      const fetched = await this.fetchWithRetry(searchUrl, gl, type, dto.q, {
+        waitForSelector: this.getWaitSelector(type),
       });
-      if (ddgResponse.ok) {
-        html = await ddgResponse.text();
-        source = 'duckduckgo';
-        response = await this.parseResults(type, html, num, {
-          q: dto.q,
-          gl,
-          hl,
-          engine: 'duckduckgo',
-          page,
-          num,
-        }, source);
+      html = fetched.html;
+      source = fetched.source;
+    } catch (error) {
+      if (supportsNominatimFallback(type)) {
+        this.logger.warn(`Google Maps falhou, usando Nominatim: ${(error as Error).message}`);
+        source = 'nominatim';
+      } else {
+        throw error;
       }
     }
 
+    let response: SearchResponse;
+
+    if (source === 'nominatim') {
+      response = await this.buildNominatimResponse(type, dto.q, hl, num, page, urlOptions);
+    } else {
+      response = await this.parseResults(type, html, num, {
+        q: dto.q,
+        gl,
+        hl,
+        engine: source === 'duckduckgo' ? 'duckduckgo' : engine,
+        page,
+        num,
+      }, source);
+
+      if (supportsNominatimFallback(type) && (!response.places || response.places.length === 0)) {
+        this.logger.warn('Parser Google Maps vazio — fallback Nominatim');
+        response = await this.buildNominatimResponse(type, dto.q, hl, num, page, urlOptions);
+        source = 'nominatim';
+      }
+
+      if (type === SearchType.WEB && source === 'google' && (!response.organic || response.organic.length === 0)) {
+        const ddgHtml = await this.fetchDuckDuckGo(dto.q);
+        if (ddgHtml) {
+          source = 'duckduckgo';
+          response = await this.parseResults(type, ddgHtml, num, {
+            q: dto.q,
+            gl,
+            hl,
+            engine: 'duckduckgo',
+            page,
+            num,
+          }, source);
+        }
+      }
+    }
+
+    response.searchParameters.engine = source;
     const normalized = await this.aiService.normalizeResults((response.organic || []) as WebResult[]);
     response.organic = normalized as WebResult[];
     response.cached = false;
@@ -127,6 +165,89 @@ export class SearchService {
     this.metrics.searchDuration.observe({ type }, response.responseTime / 1000);
 
     return response;
+  }
+
+  private extractUrlOptions(dto: BaseSearchDto): SearchUrlOptions {
+    const maps = dto as MapsSearchDto;
+    const places = dto as PlacesSearchDto;
+    const images = dto as ImagesSearchDto;
+    const news = dto as NewsSearchDto;
+
+    return {
+      lat: maps.lat,
+      lng: maps.lng,
+      radius: maps.radius,
+      placeType: places.placeType,
+      imageSize: images.size,
+      imageType: images.type,
+      newsTbs: news.tbs,
+    };
+  }
+
+  private getWaitSelector(type: SearchType): string | undefined {
+    if (type === SearchType.MAPS || type === SearchType.PLACES) {
+      return 'a[href*="/maps/place"], div[role="article"], .Nv2PK';
+    }
+    if (type === SearchType.IMAGES) return 'img[data-src], img[src]';
+    if (type === SearchType.NEWS) return 'article, g-card';
+    if (type === SearchType.SHOPPING) return 'div.sh-dgr__content, g-inner-card';
+    if (type === SearchType.VIDEOS) return 'div.g, g-scrolling-carousel';
+    return undefined;
+  }
+
+  private async buildNominatimResponse(
+    type: SearchType,
+    query: string,
+    hl: string,
+    num: number,
+    page: number,
+    urlOptions: SearchUrlOptions,
+  ): Promise<SearchResponse> {
+    let searchQuery = query;
+    if (urlOptions.placeType) {
+      const typeMap: Record<string, string> = {
+        restaurant: 'restaurante',
+        hotel: 'hotel',
+        business: 'empresa',
+        store: 'loja',
+      };
+      searchQuery = `${typeMap[urlOptions.placeType] ?? urlOptions.placeType} ${query}`;
+    }
+
+    const places = await this.nominatim.searchPlaces(searchQuery, num, hl, urlOptions);
+
+    return {
+      searchParameters: {
+        q: query,
+        gl: 'br',
+        hl,
+        type: type.toLowerCase(),
+        engine: 'nominatim',
+        page,
+        num,
+      },
+      places,
+      credits: this.creditsPerSearch,
+      cached: false,
+      responseTime: 0,
+    };
+  }
+
+  private async fetchDuckDuckGo(query: string): Promise<string | null> {
+    try {
+      const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      const response = await fetch(ddgUrl, {
+        headers: {
+          'User-Agent': this.browserService.randomUserAgent(),
+          Accept: 'text/html',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+        },
+      });
+      if (response.ok) return response.text();
+    } catch (error) {
+      this.logger.warn(`DuckDuckGo fallback falhou: ${error}`);
+    }
+    return null;
   }
 
   async batchSearch(
@@ -167,37 +288,14 @@ export class SearchService {
     };
   }
 
-  private buildSearchUrl(type: SearchType, q: string, gl: string, hl: string, page: number, num: number): string {
-    const base = 'https://www.google.com/search';
-    const params = new URLSearchParams({
-      q,
-      gl,
-      hl,
-      num: String(num),
-      start: String((page - 1) * num),
-    });
-
-    const typeMap: Partial<Record<SearchType, string>> = {
-      IMAGES: 'isch',
-      NEWS: 'nws',
-      SHOPPING: 'shop',
-      VIDEOS: 'vid',
-      MAPS: 'lcl',
-      PLACES: 'lcl',
-    };
-
-    const tbm = typeMap[type];
-    if (tbm) params.set('tbm', tbm);
-
-    return `${base}?${params.toString()}`;
-  }
-
   private async fetchWithRetry(
     url: string,
     country: string,
+    type: SearchType,
     query?: string,
+    options?: { waitForSelector?: string },
     maxRetries = 3,
-  ): Promise<{ html: string; source: 'google' | 'duckduckgo' }> {
+  ): Promise<{ html: string; source: SearchSource }> {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -210,7 +308,8 @@ export class SearchService {
           proxy: proxyUrl,
           userAgent: this.browserService.randomUserAgent(),
           viewport: this.browserService.randomViewport(),
-          timeout: 30000,
+          timeout: 35000,
+          waitForSelector: options?.waitForSelector,
         });
 
         if (proxy) await this.proxyManager.reportSuccess(proxy.id, 0);
@@ -225,22 +324,11 @@ export class SearchService {
       }
     }
 
-    if (query) {
-      try {
-        const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-        const response = await fetch(ddgUrl, {
-          headers: {
-            'User-Agent': this.browserService.randomUserAgent(),
-            Accept: 'text/html',
-            'Accept-Language': 'pt-BR,pt;q=0.9',
-          },
-        });
-        if (response.ok) {
-          this.logger.warn(`Fallback DuckDuckGo usado após falha: ${lastError?.message}`);
-          return { html: await response.text(), source: 'duckduckgo' };
-        }
-      } catch (ddgError) {
-        lastError = ddgError as Error;
+    if (query && supportsDuckDuckGoFallback(type)) {
+      const ddgHtml = await this.fetchDuckDuckGo(query);
+      if (ddgHtml) {
+        this.logger.warn(`Fallback DuckDuckGo (WEB) após falha: ${lastError?.message}`);
+        return { html: ddgHtml, source: 'duckduckgo' };
       }
     }
 
@@ -252,7 +340,7 @@ export class SearchService {
     html: string,
     num: number,
     params: { q: string; gl: string; hl: string; engine: string; page: number; num: number },
-    source: 'google' | 'duckduckgo' = 'google',
+    source: SearchSource = 'google',
   ): Promise<SearchResponse> {
     const searchParameters = {
       q: params.q,

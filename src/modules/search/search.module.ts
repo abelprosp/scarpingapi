@@ -7,11 +7,12 @@ import { ProxyModule } from '../proxy/proxy.module';
 import { ParserModule } from '../parser/parser.module';
 import { AiModule } from '../ai/ai.module';
 import { AuthModule } from '../auth/auth.module';
+import { NominatimProvider } from './providers/nominatim.provider';
 
 @Module({
   imports: [CacheModule, BrowserModule, ProxyModule, ParserModule, AiModule, AuthModule],
   controllers: [SearchController],
-  providers: [SearchService],
+  providers: [SearchService, NominatimProvider],
   exports: [SearchService],
 })
 export class SearchModule {}

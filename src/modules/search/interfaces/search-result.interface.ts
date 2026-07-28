@@ -72,6 +72,7 @@ export interface MapsResult {
   reviewCount?: number;
   category?: string;
   photos?: string[];
+  position?: number;
 }
 
 export interface KnowledgeGraphResult {
