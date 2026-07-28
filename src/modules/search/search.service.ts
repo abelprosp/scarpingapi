@@ -24,9 +24,11 @@ import {
   buildSearchUrl,
   SearchUrlOptions,
   supportsDuckDuckGoFallback,
+  supportsDuckDuckGoImagesFallback,
   supportsNominatimFallback,
 } from './builders/search-url.builder';
 import { NominatimProvider } from './providers/nominatim.provider';
+import { DuckDuckGoImagesProvider } from './providers/duckduckgo-images.provider';
 
 type SearchSource = 'google' | 'duckduckgo' | 'nominatim';
 
@@ -45,6 +47,7 @@ export class SearchService {
     private readonly prisma: PrismaService,
     private readonly metrics: MetricsService,
     private readonly nominatim: NominatimProvider,
+    private readonly ddgImages: DuckDuckGoImagesProvider,
   ) {
     this.creditsPerSearch = this.configService.get<number>('app.creditsPerSearch', 1);
   }
@@ -107,6 +110,9 @@ export class SearchService {
       if (supportsNominatimFallback(type)) {
         this.logger.warn(`Google Maps falhou, usando Nominatim: ${(error as Error).message}`);
         source = 'nominatim';
+      } else if (supportsDuckDuckGoImagesFallback(type)) {
+        this.logger.warn(`Google Images falhou (${(error as Error).message}), usando DuckDuckGo Images`);
+        source = 'duckduckgo';
       } else {
         throw error;
       }
@@ -116,6 +122,8 @@ export class SearchService {
 
     if (source === 'nominatim') {
       response = await this.buildNominatimResponse(type, dto.q, hl, num, page, urlOptions);
+    } else if (source === 'duckduckgo' && type === SearchType.IMAGES) {
+      response = await this.buildDdgImagesResponse(dto.q, gl, hl, num, page);
     } else {
       response = await this.parseResults(type, html, num, {
         q: dto.q,
@@ -145,6 +153,16 @@ export class SearchService {
             num,
           }, source);
         }
+      }
+
+      if (
+        type === SearchType.IMAGES &&
+        source === 'google' &&
+        (!response.images || response.images.length === 0)
+      ) {
+        this.logger.warn('Google Images vazio — fallback DuckDuckGo Images');
+        response = await this.buildDdgImagesResponse(dto.q, gl, hl, num, page);
+        source = 'duckduckgo';
       }
     }
 
@@ -193,6 +211,32 @@ export class SearchService {
     if (type === SearchType.SHOPPING) return 'div.sh-dgr__content, g-inner-card';
     if (type === SearchType.VIDEOS) return 'div.g, g-scrolling-carousel';
     return undefined;
+  }
+
+  private async buildDdgImagesResponse(
+    query: string,
+    gl: string,
+    hl: string,
+    num: number,
+    page: number,
+  ): Promise<SearchResponse> {
+    const images = await this.ddgImages.searchImages(query, num, gl, hl, page);
+
+    return {
+      searchParameters: {
+        q: query,
+        gl,
+        hl,
+        type: 'images',
+        engine: 'duckduckgo',
+        page,
+        num,
+      },
+      images,
+      credits: this.creditsPerSearch,
+      cached: false,
+      responseTime: 0,
+    };
   }
 
   private async buildNominatimResponse(
@@ -322,6 +366,11 @@ export class SearchService {
         const backoff = Math.pow(2, attempt) * 1000;
         await new Promise((r) => setTimeout(r, backoff));
       }
+    }
+
+    if (query && supportsDuckDuckGoImagesFallback(type)) {
+      this.logger.warn(`Fallback DuckDuckGo Images após falha: ${lastError?.message}`);
+      return { html: '', source: 'duckduckgo' };
     }
 
     if (query && supportsDuckDuckGoFallback(type)) {

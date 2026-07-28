@@ -127,6 +127,10 @@ export function supportsDuckDuckGoFallback(type: SearchType): boolean {
   return type === SearchType.WEB;
 }
 
+export function supportsDuckDuckGoImagesFallback(type: SearchType): boolean {
+  return type === SearchType.IMAGES;
+}
+
 export function supportsNominatimFallback(type: SearchType): boolean {
   return type === SearchType.MAPS || type === SearchType.PLACES;
 }
