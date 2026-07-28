@@ -43,6 +43,7 @@ export class SearchService {
     user: AuthenticatedUser,
     type: SearchType,
     dto: BaseSearchDto,
+    options?: { skipBilling?: boolean },
   ): Promise<SearchResponse> {
     const start = Date.now();
     const gl = dto.gl ?? this.configService.get<string>('search.defaultCountry') ?? 'br';
@@ -52,7 +53,9 @@ export class SearchService {
     const page = dto.page || 1;
     const engine = dto.engine ?? this.configService.get<string>('search.defaultEngine') ?? 'google';
 
-    await this.checkCredits(user);
+    if (!options?.skipBilling) {
+      await this.checkCredits(user);
+    }
 
     const cacheKey = this.cacheService.buildKey({
       type: type.toLowerCase(),
@@ -115,7 +118,9 @@ export class SearchService {
     response.credits = this.creditsPerSearch;
 
     await this.cacheService.set(cacheKey, response);
-    await this.deductCredits(user.id, this.creditsPerSearch);
+    if (!options?.skipBilling) {
+      await this.deductCredits(user.id, this.creditsPerSearch);
+    }
     await this.logUsage(user, type, dto.q, gl, hl, device, response.responseTime, false, true);
 
     this.metrics.searchRequestsTotal.inc({ type, cached: 'false', success: 'true' });

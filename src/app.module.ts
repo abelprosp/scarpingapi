@@ -24,6 +24,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { AdvancedModule } from './modules/advanced/advanced.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { AuditModule } from './modules/audit/audit.module';
     DashboardModule,
     HealthModule,
     AuditModule,
+    AdvancedModule,
   ],
 })
 export class AppModule {}

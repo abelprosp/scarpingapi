@@ -91,6 +91,10 @@ model User {
   usageLogs     UsageLog[]
   auditLogs     AuditLog[]
   invoices      Invoice[]
+  crawlJobs     CrawlJob[]
+  researchSessions ResearchSession[]
+  datasets      Dataset[]
+  ragCollections RagCollection[]
 
   @@map("users")
 }
@@ -266,4 +270,117 @@ model SystemConfig {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("system_config")
+}
+
+enum CrawlJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ResearchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model CrawlJob {
+  id           String         @id @default(uuid())
+  userId       String         @map("user_id")
+  seedUrl      String         @map("seed_url")
+  status       CrawlJobStatus @default(PENDING)
+  maxDepth     Int            @default(2) @map("max_depth")
+  maxPages     Int            @default(50) @map("max_pages")
+  pagesFound   Int            @default(0) @map("pages_found")
+  results      Json?
+  errorMessage String?        @map("error_message")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  completedAt  DateTime?      @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("crawl_jobs")
+}
+
+model ResearchSession {
+  id          String         @id @default(uuid())
+  userId      String         @map("user_id")
+  query       String
+  status      ResearchStatus @default(PENDING)
+  depth       Int            @default(1)
+  report      Json?
+  citations   Json?
+  creditsUsed Int            @default(0) @map("credits_used")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  completedAt DateTime?      @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("research_sessions")
+}
+
+model Dataset {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  schema      Json     @default("{}")
+  isPublic    Boolean  @default(false) @map("is_public")
+  recordCount Int      @default(0) @map("record_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records DatasetRecord[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("datasets")
+}
+
+model DatasetRecord {
+  id        String   @id @default(uuid())
+  datasetId String   @map("dataset_id")
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@map("dataset_records")
+}
+
+model RagCollection {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  dimension Int      @default(384)
+  docCount  Int      @default(0) @map("doc_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents RagDocument[]
+
+  @@unique([userId, name])
+  @@map("rag_collections")
+}
+
+model RagDocument {
+  id           String   @id @default(uuid())
+  collectionId String   @map("collection_id")
+  content      String
+  metadata     Json?
+  embedding    Json?
+  chunkIndex   Int      @default(0) @map("chunk_index")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  collection RagCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
+  @@map("rag_documents")
 }

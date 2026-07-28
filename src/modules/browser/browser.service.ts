@@ -132,6 +132,77 @@ export class BrowserService implements OnModuleDestroy {
     }
   }
 
+  async screenshot(options: FetchOptions & { fullPage?: boolean }): Promise<Buffer> {
+    await this.getBrowser();
+    const context = this.getContextFromPool();
+    const page = await context.newPage();
+
+    try {
+      await page.goto(options.url, {
+        waitUntil: 'networkidle',
+        timeout: options.timeout ?? 30000,
+      });
+      return await page.screenshot({ fullPage: options.fullPage ?? false, type: 'png' });
+    } finally {
+      await page.close();
+    }
+  }
+
+  async navigateAndInteract(options: {
+    url: string;
+    actions?: Array<{ type: string; selector?: string; value?: string; wait?: number }>;
+    timeout?: number;
+  }): Promise<{ html: string; url: string; title: string }> {
+    await this.getBrowser();
+    const context = this.getContextFromPool();
+    const page = await context.newPage();
+
+    try {
+      await page.goto(options.url, {
+        waitUntil: 'domcontentloaded',
+        timeout: options.timeout ?? 30000,
+      });
+
+      for (const action of options.actions ?? []) {
+        switch (action.type) {
+          case 'click':
+            if (action.selector) await page.click(action.selector);
+            break;
+          case 'fill':
+            if (action.selector && action.value) await page.fill(action.selector, action.value);
+            break;
+          case 'wait':
+            await page.waitForTimeout(action.wait ?? 1000);
+            break;
+          case 'scroll':
+            await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+            break;
+        }
+      }
+
+      return {
+        html: await page.content(),
+        url: page.url(),
+        title: await page.title(),
+      };
+    } finally {
+      await page.close();
+    }
+  }
+
+  async generatePdfFromUrl(url: string, timeout = 30000): Promise<Buffer> {
+    await this.getBrowser();
+    const context = this.getContextFromPool();
+    const page = await context.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout });
+      return await page.pdf({ format: 'A4', printBackground: true });
+    } finally {
+      await page.close();
+    }
+  }
+
   private async detectCaptcha(page: Page): Promise<boolean> {
     const captchaSelectors = [
       '#captcha',

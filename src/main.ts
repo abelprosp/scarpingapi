@@ -63,7 +63,7 @@ async function bootstrap() {
     .addTag('Auth', 'Autenticação')
     .addTag('Dashboard', 'Painel administrativo')
     .addTag('Billing', 'Faturamento e assinaturas')
-    .addTag('Health', 'Status e saúde')
+    .addTag('Advanced APIs', 'APIs avançadas: Crawl, Extract, RAG, Deep Research, etc.')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
