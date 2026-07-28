@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "Serper Platform API",
+    "description": "Coleção Postman para a Serper Platform SERP API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "apiKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\",\"password\":\"SecurePass123!\",\"name\":\"Test User\"}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": ["if (pm.response.code === 200 || pm.response.code === 201) {",
+                "  var json = pm.response.json();",
+                "  pm.collectionVariables.set('token', json.accessToken);",
+                "}"]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@serper.local\",\"password\":\"Admin@123\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Web Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"q\":\"nestjs typescript\",\"gl\":\"br\",\"hl\":\"pt\",\"num\":10}"
+            },
+            "url": "{{baseUrl}}/search"
+          }
+        },
+        {
+          "name": "Images Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"q\":\"paisagem brasil\",\"gl\":\"br\",\"hl\":\"pt\"}"
+            },
+            "url": "{{baseUrl}}/images"
+          }
+        },
+        {
+          "name": "Batch Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"queries\":[{\"type\":\"web\",\"q\":\"ai brasil\"},{\"type\":\"news\",\"q\":\"tecnologia\"}]}"
+            },
+            "url": "{{baseUrl}}/batch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "Get Credits",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/credits"
+          }
+        },
+        {
+          "name": "Get Usage",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/usage"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/status"
+          }
+        }
+      ]
+    }
+  ]
+}
