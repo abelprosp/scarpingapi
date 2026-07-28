@@ -157,8 +157,33 @@ curl -X POST http://localhost:3000/api/v1/search \
 ### Docker Compose (produção)
 
 ```bash
-docker compose up -d
+cp .env.production.example .env
+# Edite .env com senhas fortes
+
+docker compose down
+docker compose up -d --build
+
+# Com monitoramento (Prometheus + Grafana)
+docker compose --profile monitoring up -d
 ```
+
+**Importante:** Postgres e Redis **não expõem portas** no host — evita conflito com Redis/PostgreSQL já instalados na VPS. A API se conecta pela rede interna Docker.
+
+Se a porta 80 estiver ocupada, defina no `.env`:
+```
+HTTP_PORT=8080
+```
+
+### Primeiro deploy na VPS
+
+```bash
+git pull
+docker compose down
+docker compose up -d --build
+docker compose logs -f api
+```
+
+As migrations rodam automaticamente no startup do container.
 
 ### Kubernetes
 

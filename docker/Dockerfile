@@ -16,7 +16,7 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont wget
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
@@ -24,17 +24,21 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm install prisma@6.19.3 --no-save
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY docker/entrypoint.sh /entrypoint.sh
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001 -G nodejs
+RUN chmod +x /entrypoint.sh && \
+    addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001 -G nodejs && \
+    chown -R nestjs:nodejs /app
+
 USER nestjs
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD wget -qO- http://localhost:3000/api/v1/health || exit 1
 
-CMD ["node", "dist/main.js"]
+ENTRYPOINT ["/entrypoint.sh"]
