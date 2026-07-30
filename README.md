@@ -188,14 +188,33 @@ docker compose logs -f api
 
 A API fica em `http://SEU_IP:8080/api/v1` (porta configurável via `API_PORT`).
 
-O container **nginx** é opcional (`--profile bundled-nginx`). Se a porta 80 já estiver em uso na VPS, **não use o nginx do compose** — use o nginx/apache que já está instalado como reverse proxy:
+**Domínio de produção:** `https://api.noviqsearch.online/api/v1`  
+Guia completo: [docs/vps-domain-setup.md](docs/vps-domain-setup.md)
+
+O container **nginx** é opcional (`--profile bundled-nginx`). Se a porta 80 já estiver em uso na VPS, **não use o nginx do compose** — use o nginx do host como reverse proxy:
+
+```bash
+# Copiar config pronta (SSL)
+sudo cp docker/nginx/api.noviqsearch.online.conf /etc/nginx/sites-available/api.noviqsearch.online
+sudo ln -sf /etc/nginx/sites-available/api.noviqsearch.online /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Config mínima (sem SSL, proxy para Docker na 8080):
 
 ```nginx
-# /etc/nginx/sites-available/serper
-location / {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
+# /etc/nginx/sites-available/api.noviqsearch.online
+server {
+    listen 80;
+    server_name api.noviqsearch.online;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
 

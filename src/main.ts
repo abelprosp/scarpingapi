@@ -24,6 +24,12 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
+  const appName = configService.get<string>('app.appName', 'Serper Platform');
+  const publicUrl = configService.get<string>('app.publicUrl', 'http://localhost:3000');
+  const corsOriginRaw = configService.get<string>('CORS_ORIGIN', '*');
+  const corsOrigin = corsOriginRaw.includes(',')
+    ? corsOriginRaw.split(',').map((value) => value.trim())
+    : corsOriginRaw;
 
   initSentry(configService);
 
@@ -34,7 +40,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix(apiPrefix);
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN', '*'),
+    origin: corsOrigin,
     credentials: true,
   });
 
@@ -51,11 +57,13 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Serper Platform API')
+    .setTitle(`${appName} API`)
     .setDescription(
       'API REST de busca em motores de pesquisa com resultados estruturados para IA, automações e inteligência de mercado.',
     )
     .setVersion('1.0')
+    .addServer(`${publicUrl}/${apiPrefix}`, 'Production')
+    .addServer(`http://localhost:${port}/${apiPrefix}`, 'Local')
     .addBearerAuth()
     .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'api-key')
     .addTag('Search', 'Endpoints de busca')
@@ -72,8 +80,8 @@ async function bootstrap() {
   });
 
   await app.listen(port, '0.0.0.0');
-  logger.log(`Application running on http://localhost:${port}/${apiPrefix}`);
-  logger.log(`Swagger docs: http://localhost:${port}/docs`);
+  logger.log(`Application running on ${publicUrl}/${apiPrefix}`);
+  logger.log(`Swagger docs: ${publicUrl}/docs`);
 }
 
 bootstrap();

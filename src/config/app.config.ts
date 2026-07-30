@@ -5,6 +5,8 @@ export const appConfig = registerAs('app', () => ({
   port: parseInt(process.env.PORT || '3000', 10),
   apiPrefix: process.env.API_PREFIX || 'api/v1',
   appName: process.env.APP_NAME || 'Serper Platform',
+  domain: process.env.API_DOMAIN || process.env.APP_DOMAIN || 'localhost',
+  publicUrl: (process.env.API_PUBLIC_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, ''),
   corsOrigin: process.env.CORS_ORIGIN || '*',
   defaultFreeCredits: parseInt(process.env.DEFAULT_FREE_CREDITS || '2500', 10),
   creditsPerSearch: parseInt(process.env.CREDITS_PER_SEARCH || '1', 10),

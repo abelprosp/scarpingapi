@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { Public } from '../../common/decorators/auth.decorator';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { RedisService } from '../../infrastructure/redis/redis.service';
@@ -10,6 +11,7 @@ export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('health')
@@ -49,10 +51,17 @@ export class HealthController {
   @Public()
   @ApiOperation({ summary: 'Status da plataforma' })
   status() {
+    const appName = this.configService.get<string>('app.appName', 'Serper Platform');
+    const publicUrl = this.configService.get<string>('app.publicUrl', 'http://localhost:3000');
+    const apiPrefix = this.configService.get<string>('app.apiPrefix', 'api/v1');
+
     return {
-      platform: 'Serper Platform',
+      platform: appName,
       version: '1.0.0',
       status: 'operational',
+      baseUrl: `${publicUrl}/${apiPrefix}`,
+      docs: `${publicUrl}/docs`,
+      domain: this.configService.get<string>('app.domain', 'localhost'),
       endpoints: [
         'POST /search',
         'POST /images',

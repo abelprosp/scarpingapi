@@ -4,7 +4,7 @@
 # =============================================================================
 #
 # Uso:
-#   export BASE_URL="http://72.61.58.208:8080/api/v1"
+#   export BASE_URL="https://api.noviqsearch.online/api/v1"
 #   export TOKEN="seu_access_token"
 #   export API_KEY="sk_sua_api_key"
 #
@@ -439,7 +439,7 @@ curl -s "$BASE_URL/dashboard/audit-logs?page=1&limit=50" \
 # FLUXO COMPLETO — login + busca em um comando
 # =============================================================================
 
-# export BASE_URL="http://72.61.58.208:8080/api/v1"
+# export BASE_URL="https://api.noviqsearch.online/api/v1"
 # TOKEN=$(curl -s -X POST "$BASE_URL/auth/login" \
 #   -H "Content-Type: application/json" \
 #   -d '{"email":"admin@serper.local","password":"Admin@123"}' \
