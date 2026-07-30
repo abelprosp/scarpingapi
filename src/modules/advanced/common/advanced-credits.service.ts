@@ -1,26 +1,18 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { AuthenticatedUser } from '../../../common/decorators/auth.decorator';
 import { getAdvancedCreditCost, DEFAULT_SEARCH_CREDIT_COST } from '../../../config/credits.config';
+import { CreditsService } from '../../credits/credits.service';
 
 @Injectable()
 export class AdvancedCreditsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly creditsService: CreditsService,
     private readonly configService: ConfigService,
   ) {}
 
-  async deduct(user: AuthenticatedUser, credits: number, operation: string): Promise<number> {
-    const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
-    if (!dbUser || dbUser.credits < credits) {
-      throw new ForbiddenException(`Créditos insuficientes para ${operation}`);
-    }
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { credits: { decrement: credits } },
-    });
-    return dbUser.credits - credits;
+  async deduct(user: AuthenticatedUser, credits: number, _operation: string): Promise<number> {
+    return this.creditsService.deduct(user, credits);
   }
 
   costFor(operation: string): number {

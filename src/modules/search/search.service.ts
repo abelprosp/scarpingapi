@@ -30,6 +30,7 @@ import {
 import { NominatimProvider } from './providers/nominatim.provider';
 import { DuckDuckGoImagesProvider } from './providers/duckduckgo-images.provider';
 import { getSearchCreditCost } from '../../config/credits.config';
+import { CreditsService } from '../credits/credits.service';
 
 type SearchSource = 'google' | 'duckduckgo' | 'nominatim';
 
@@ -48,6 +49,7 @@ export class SearchService {
     private readonly metrics: MetricsService,
     private readonly nominatim: NominatimProvider,
     private readonly ddgImages: DuckDuckGoImagesProvider,
+    private readonly creditsService: CreditsService,
   ) {}
 
   private creditCost(type: SearchType): number {
@@ -69,10 +71,6 @@ export class SearchService {
     const engine = dto.engine ?? this.configService.get<string>('search.defaultEngine') ?? 'google';
     const urlOptions = this.extractUrlOptions(dto);
     const operationCost = this.creditCost(type);
-
-    if (!options?.skipBilling) {
-      await this.checkCredits(user, operationCost);
-    }
 
     const cacheKey = this.cacheService.buildKey({
       type: type.toLowerCase(),
@@ -178,7 +176,7 @@ export class SearchService {
 
     await this.cacheService.set(cacheKey, response);
     if (!options?.skipBilling) {
-      await this.deductCredits(user.id, operationCost);
+      await this.creditsService.deduct(user, operationCost);
     }
     await this.logUsage(user, type, dto.q, gl, hl, device, response.responseTime, false, true, undefined, operationCost);
 
@@ -306,11 +304,7 @@ export class SearchService {
       (sum, query) => sum + getSearchCreditCost(this.mapSearchType(query.type)),
       0,
     );
-
-    const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
-    if (!dbUser || dbUser.credits < totalCreditsNeeded) {
-      throw new ForbiddenException('Créditos insuficientes para batch search');
-    }
+    void totalCreditsNeeded;
 
     const results = await Promise.allSettled(
       queries.map(async (query, index) => {
@@ -487,20 +481,6 @@ export class SearchService {
       places: SearchType.PLACES,
     };
     return map[type] || SearchType.WEB;
-  }
-
-  private async checkCredits(user: AuthenticatedUser, amount: number): Promise<void> {
-    const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
-    if (!dbUser || dbUser.credits < amount) {
-      throw new ForbiddenException('Créditos insuficientes');
-    }
-  }
-
-  private async deductCredits(userId: string, amount: number): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { credits: { decrement: amount } },
-    });
   }
 
   private async logUsage(

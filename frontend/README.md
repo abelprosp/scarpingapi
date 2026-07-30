@@ -50,5 +50,5 @@ docker compose up -d --build web api
 | Plano | Preço | Créditos |
 |-------|-------|----------|
 | Grátis | R$ 0 | 2.700 ao cadastrar |
-| Business | R$ 197/mês | 100.000/mês |
+| Business | R$ 197/mês | 70.000/mês |
 | Pro | R$ 497/mês | 350.000/mês |

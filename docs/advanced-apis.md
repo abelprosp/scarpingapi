@@ -20,7 +20,7 @@ Método: **POST** (exceto `/capabilities`)
 | Research | 25 |
 | Deep Research | 60 |
 
-**Cadastro:** 2.700 créditos grátis · **Plano Business:** R$ 197/mês · 100.000 créditos
+**Cadastro:** 2.700 créditos grátis · **Plano Mensal:** R$ 197/mês · 70.000 créditos · **Avulso:** R$ 5/500 créditos
 
 ---
 

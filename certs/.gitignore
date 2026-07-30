@@ -1,0 +1,4 @@
+# Coloque aqui o certificado .p12 da EFI Pay (não commitar)
+# Ex.: efi-producao.p12
+*
+!.gitignore

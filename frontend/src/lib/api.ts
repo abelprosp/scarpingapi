@@ -43,6 +43,28 @@ export interface UsageLog {
   createdAt: string;
 }
 
+export interface PixPayment {
+  txid: string;
+  qrCode: string;
+  copyPaste: string;
+  expiresAt: string;
+  amount: number;
+  creditsGranted: number;
+  type: 'SUBSCRIPTION' | 'CREDIT_PACK' | 'OVERAGE';
+  status: 'PENDING' | 'PAID' | 'EXPIRED';
+}
+
+export interface BillingProfile {
+  credits: number;
+  monthlyAllowance: number;
+  monthlyUsed: number;
+  monthlyRemaining: number;
+  overagePending: number;
+  payAsYouGoEnabled: boolean;
+  totalAvailable: number;
+  pendingPixPayments: PixPayment[];
+}
+
 class ApiError extends Error {
   constructor(
     message: string,
@@ -99,6 +121,29 @@ export const api = {
   usage: () => request<UsageLog[]>('/usage'),
 
   plans: () => request<Plan[]>('/billing/plans'),
+
+  billingProfile: () => request<BillingProfile>('/billing/profile'),
+
+  setPayAsYouGo: (enabled: boolean) =>
+    request<{ payAsYouGoEnabled: boolean }>('/billing/pay-as-you-go', {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    }),
+
+  pixSubscribe: () =>
+    request<PixPayment>('/billing/pix/subscribe', { method: 'POST' }),
+
+  pixBuyCredits: (quantity = 1) =>
+    request<PixPayment>('/billing/pix/buy-credits', {
+      method: 'POST',
+      body: JSON.stringify({ quantity }),
+    }),
+
+  pixOverage: () =>
+    request<PixPayment>('/billing/pix/overage', { method: 'POST' }),
+
+  pixStatus: (txid: string) =>
+    request<PixPayment>(`/billing/pix/${txid}/status`),
 
   checkout: (planId: string) =>
     request<{ url?: string; message?: string }>('/billing/checkout', {

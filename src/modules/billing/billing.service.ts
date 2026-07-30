@@ -89,15 +89,36 @@ export class BillingService {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) return;
 
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + 30);
+
     await this.prisma.subscription.upsert({
       where: { userId },
-      update: { planId, status: 'ACTIVE', stripeCustomerId: customerId },
-      create: { userId, planId, status: 'ACTIVE', stripeCustomerId: customerId },
+      update: {
+        planId,
+        status: 'ACTIVE',
+        stripeCustomerId: customerId,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+      },
+      create: {
+        userId,
+        planId,
+        status: 'ACTIVE',
+        stripeCustomerId: customerId,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+      },
     });
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { credits: { increment: plan.creditsMonthly } },
+      data: {
+        monthlyCreditsUsed: 0,
+        monthlyCreditsResetAt: periodEnd,
+        overageCreditsPending: 0,
+      },
     });
   }
 

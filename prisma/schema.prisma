@@ -73,6 +73,18 @@ enum AuditAction {
   SETTINGS_UPDATED
 }
 
+enum PixPaymentType {
+  SUBSCRIPTION
+  CREDIT_PACK
+  OVERAGE
+}
+
+enum PixPaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -80,21 +92,26 @@ model User {
   name          String?
   role          UserRole  @default(USER)
   emailVerified Boolean   @default(false) @map("email_verified")
-  credits       Int       @default(2700)
-  isActive      Boolean   @default(true) @map("is_active")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  credits               Int       @default(2700)
+  payAsYouGoEnabled     Boolean   @default(false) @map("pay_as_you_go_enabled")
+  monthlyCreditsUsed    Int       @default(0) @map("monthly_credits_used")
+  monthlyCreditsResetAt DateTime? @map("monthly_credits_reset_at")
+  overageCreditsPending Int       @default(0) @map("overage_credits_pending")
+  isActive              Boolean   @default(true) @map("is_active")
+  lastLoginAt           DateTime? @map("last_login_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  apiKeys       ApiKey[]
-  subscription  Subscription?
-  usageLogs     UsageLog[]
-  auditLogs     AuditLog[]
-  invoices      Invoice[]
-  crawlJobs     CrawlJob[]
+  apiKeys          ApiKey[]
+  subscription     Subscription?
+  usageLogs        UsageLog[]
+  auditLogs        AuditLog[]
+  invoices         Invoice[]
+  pixPayments      PixPayment[]
+  crawlJobs        CrawlJob[]
   researchSessions ResearchSession[]
-  datasets      Dataset[]
-  ragCollections RagCollection[]
+  datasets         Dataset[]
+  ragCollections   RagCollection[]
 
   @@map("users")
 }
@@ -139,8 +156,33 @@ model Plan {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
+  pixPayments   PixPayment[]
 
   @@map("plans")
+}
+
+model PixPayment {
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  txid           String           @unique
+  amount         Int
+  creditsGranted Int              @map("credits_granted")
+  type           PixPaymentType
+  status         PixPaymentStatus @default(PENDING)
+  qrCode         String?          @map("qr_code") @db.Text
+  copyPaste      String?          @map("copy_paste") @db.Text
+  planId         String?          @map("plan_id")
+  quantity       Int              @default(1)
+  expiresAt      DateTime?        @map("expires_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  paidAt         DateTime?        @map("paid_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status])
+  @@map("pix_payments")
 }
 
 model Subscription {

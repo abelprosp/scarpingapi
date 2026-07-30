@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'NoviqSearch — API de Busca e Dados Web',
   description:
-    'API SERP com 2.700 créditos grátis. Planos a partir de R$ 197/mês com 100.000 créditos. Busca web, mapas, imagens, research e mais.',
+    'API SERP com 2.700 créditos grátis. Plano mensal R$ 197/mês com 70.000 créditos. Avulso R$ 5/500 créditos.',
   openGraph: {
     title: 'NoviqSearch',
     description: 'API de busca para desenvolvedores — 2.700 créditos grátis ao cadastrar.',

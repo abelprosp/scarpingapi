@@ -7,6 +7,7 @@ import { databaseConfig } from './config/database.config';
 import { redisConfig } from './config/redis.config';
 import { jwtConfig } from './config/jwt.config';
 import { searchConfig } from './config/search.config';
+import { efiConfig, billingConfig } from './config/efi.config';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { MetricsModule } from './infrastructure/monitoring/metrics.module';
@@ -30,7 +31,7 @@ import { AdvancedModule } from './modules/advanced/advanced.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, redisConfig, jwtConfig, searchConfig],
+      load: [appConfig, databaseConfig, redisConfig, jwtConfig, searchConfig, efiConfig, billingConfig],
       envFilePath: ['.env', '.env.local'],
     }),
     ThrottlerModule.forRoot([

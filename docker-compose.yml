@@ -57,6 +57,17 @@ services:
       APP_NAME: ${APP_NAME:-NoviqSearch}
       DEFAULT_FREE_CREDITS: ${DEFAULT_FREE_CREDITS:-2700}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://noviqsearch.online,https://api.noviqsearch.online}
+      EFI_CLIENT_ID: ${EFI_CLIENT_ID:-}
+      EFI_CLIENT_SECRET: ${EFI_CLIENT_SECRET:-}
+      EFI_PIX_KEY: ${EFI_PIX_KEY:-}
+      EFI_SANDBOX: ${EFI_SANDBOX:-false}
+      EFI_CERTIFICATE_PATH: ${EFI_CERTIFICATE_PATH:-/app/certs/efi-producao.p12}
+      EFI_WEBHOOK_SECRET: ${EFI_WEBHOOK_SECRET:-}
+      CREDIT_PACK_PRICE_CENTS: ${CREDIT_PACK_PRICE_CENTS:-500}
+      CREDIT_PACK_CREDITS: ${CREDIT_PACK_CREDITS:-500}
+      OVERAGE_BLOCK_CREDITS: ${OVERAGE_BLOCK_CREDITS:-500}
+    volumes:
+      - ./certs:/app/certs:ro
     depends_on:
       postgres:
         condition: service_healthy

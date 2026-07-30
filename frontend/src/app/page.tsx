@@ -60,8 +60,9 @@ export default function HomePage() {
             </a>
           </div>
           <p className="mt-6 text-sm text-muted">
-            Plano Business: <strong className="text-foreground">R$ 197/mês</strong> com{' '}
-            <strong className="text-foreground">100.000 créditos</strong>
+            Plano Mensal: <strong className="text-foreground">R$ 197/mês</strong> com{' '}
+            <strong className="text-foreground">70.000 créditos</strong>
+            {' '}· Avulso <strong className="text-foreground">R$ 5 / 500 créditos</strong>
           </p>
         </div>
       </section>

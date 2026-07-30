@@ -35,7 +35,7 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-muted">Plano recomendado</p>
           <p className="mt-2 text-lg font-semibold">Business — R$ 197/mês</p>
-          <p className="text-sm text-muted">100.000 créditos/mês</p>
+          <p className="text-sm text-muted">70.000 créditos/mês</p>
           <Link href="/dashboard/billing" className="mt-3 inline-block text-sm text-accent hover:underline">
             Ver planos →
           </Link>
