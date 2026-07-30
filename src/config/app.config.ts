@@ -4,12 +4,12 @@ export const appConfig = registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3000', 10),
   apiPrefix: process.env.API_PREFIX || 'api/v1',
-  appName: process.env.APP_NAME || 'Serper Platform',
+  appName: process.env.APP_NAME || 'NoviqSearch',
   domain: process.env.API_DOMAIN || process.env.APP_DOMAIN || 'localhost',
   publicUrl: (process.env.API_PUBLIC_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, ''),
   corsOrigin: process.env.CORS_ORIGIN || '*',
-  defaultFreeCredits: parseInt(process.env.DEFAULT_FREE_CREDITS || '2500', 10),
-  creditsPerSearch: parseInt(process.env.CREDITS_PER_SEARCH || '1', 10),
+  defaultFreeCredits: parseInt(process.env.DEFAULT_FREE_CREDITS || '2700', 10),
+  creditsPerSearch: parseInt(process.env.CREDITS_PER_SEARCH || '2', 10),
 }));
 
 export const databaseConfig = registerAs('database', () => ({

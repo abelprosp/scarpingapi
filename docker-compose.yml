@@ -53,7 +53,9 @@ services:
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
       API_DOMAIN: ${API_DOMAIN:-api.noviqsearch.online}
       API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.noviqsearch.online}
-      APP_URL: ${APP_URL:-https://api.noviqsearch.online}
+      APP_URL: ${APP_URL:-https://noviqsearch.online}
+      APP_NAME: ${APP_NAME:-NoviqSearch}
+      DEFAULT_FREE_CREDITS: ${DEFAULT_FREE_CREDITS:-2700}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://noviqsearch.online,https://api.noviqsearch.online}
     depends_on:
       postgres:
@@ -62,6 +64,22 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    networks:
+      - serper-internal
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.noviqsearch.online/api/v1}
+    container_name: noviqsearch-web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-3001}:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
     networks:
       - serper-internal
 

@@ -8,14 +8,19 @@ Método: **POST** (exceto `/capabilities`)
 
 | API | Créditos |
 |-----|----------|
-| Search | 1 |
-| Extract | 2 |
-| Screenshot / PDF | 3 |
-| Browser | 4 |
-| Crawl | 5 |
-| AI Search / RAG Index | 5 |
-| Research | 10 |
-| Deep Research | 25 |
+| Busca web | 2 |
+| Autocomplete | 1 |
+| Imagens / News / Vídeos | 3 |
+| Shopping / Reverse image | 4 |
+| Mapas / Locais | 5 |
+| Extract / Dataset query | 5 |
+| Screenshot / PDF / RAG query | 8 |
+| Browser | 10 |
+| Crawl / AI Search / RAG Index | 15 |
+| Research | 25 |
+| Deep Research | 60 |
+
+**Cadastro:** 2.700 créditos grátis · **Plano Business:** R$ 197/mês · 100.000 créditos
 
 ---
 

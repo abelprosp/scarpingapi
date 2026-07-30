@@ -29,13 +29,13 @@ import {
 } from './builders/search-url.builder';
 import { NominatimProvider } from './providers/nominatim.provider';
 import { DuckDuckGoImagesProvider } from './providers/duckduckgo-images.provider';
+import { getSearchCreditCost } from '../../config/credits.config';
 
 type SearchSource = 'google' | 'duckduckgo' | 'nominatim';
 
 @Injectable()
 export class SearchService {
   private readonly logger = new Logger(SearchService.name);
-  private readonly creditsPerSearch: number;
 
   constructor(
     private readonly configService: ConfigService,
@@ -48,8 +48,10 @@ export class SearchService {
     private readonly metrics: MetricsService,
     private readonly nominatim: NominatimProvider,
     private readonly ddgImages: DuckDuckGoImagesProvider,
-  ) {
-    this.creditsPerSearch = this.configService.get<number>('app.creditsPerSearch', 1);
+  ) {}
+
+  private creditCost(type: SearchType): number {
+    return getSearchCreditCost(type);
   }
 
   async search(
@@ -66,9 +68,10 @@ export class SearchService {
     const page = dto.page || 1;
     const engine = dto.engine ?? this.configService.get<string>('search.defaultEngine') ?? 'google';
     const urlOptions = this.extractUrlOptions(dto);
+    const operationCost = this.creditCost(type);
 
     if (!options?.skipBilling) {
-      await this.checkCredits(user);
+      await this.checkCredits(user, operationCost);
     }
 
     const cacheKey = this.cacheService.buildKey({
@@ -171,13 +174,13 @@ export class SearchService {
     response.organic = normalized as WebResult[];
     response.cached = false;
     response.responseTime = Date.now() - start;
-    response.credits = this.creditsPerSearch;
+    response.credits = operationCost;
 
     await this.cacheService.set(cacheKey, response);
     if (!options?.skipBilling) {
-      await this.deductCredits(user.id, this.creditsPerSearch);
+      await this.deductCredits(user.id, operationCost);
     }
-    await this.logUsage(user, type, dto.q, gl, hl, device, response.responseTime, false, true);
+    await this.logUsage(user, type, dto.q, gl, hl, device, response.responseTime, false, true, undefined, operationCost);
 
     this.metrics.searchRequestsTotal.inc({ type, cached: 'false', success: 'true' });
     this.metrics.searchDuration.observe({ type }, response.responseTime / 1000);
@@ -233,7 +236,7 @@ export class SearchService {
         num,
       },
       images,
-      credits: this.creditsPerSearch,
+      credits: getSearchCreditCost(SearchType.IMAGES),
       cached: false,
       responseTime: 0,
     };
@@ -271,7 +274,7 @@ export class SearchService {
         num,
       },
       places,
-      credits: this.creditsPerSearch,
+      credits: getSearchCreditCost(type),
       cached: false,
       responseTime: 0,
     };
@@ -299,7 +302,10 @@ export class SearchService {
     queries: Array<{ type: string; q: string; gl?: string; hl?: string; num?: number }>,
   ): Promise<BatchSearchResponse> {
     const start = Date.now();
-    const totalCreditsNeeded = queries.length * this.creditsPerSearch;
+    const totalCreditsNeeded = queries.reduce(
+      (sum, query) => sum + getSearchCreditCost(this.mapSearchType(query.type)),
+      0,
+    );
 
     const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
     if (!dbUser || dbUser.credits < totalCreditsNeeded) {
@@ -327,7 +333,13 @@ export class SearchService {
 
     return {
       results: batchResults,
-      totalCredits: batchResults.filter((r) => r.success).length * this.creditsPerSearch,
+      totalCredits: batchResults.reduce((sum, r) => {
+        if (!r.success) return sum;
+        const credits = 'data' in r && r.data?.credits != null
+          ? r.data.credits
+          : getSearchCreditCost(this.mapSearchType(r.type));
+        return sum + credits;
+      }, 0),
       responseTime: Date.now() - start,
     };
   }
@@ -403,7 +415,7 @@ export class SearchService {
 
     const response: SearchResponse = {
       searchParameters,
-      credits: this.creditsPerSearch,
+      credits: getSearchCreditCost(type),
       cached: false,
       responseTime: 0,
     };
@@ -477,9 +489,9 @@ export class SearchService {
     return map[type] || SearchType.WEB;
   }
 
-  private async checkCredits(user: AuthenticatedUser): Promise<void> {
+  private async checkCredits(user: AuthenticatedUser, amount: number): Promise<void> {
     const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
-    if (!dbUser || dbUser.credits < this.creditsPerSearch) {
+    if (!dbUser || dbUser.credits < amount) {
       throw new ForbiddenException('Créditos insuficientes');
     }
   }
@@ -502,6 +514,7 @@ export class SearchService {
     cached: boolean,
     success: boolean,
     errorMessage?: string,
+    creditsUsed?: number,
   ): Promise<void> {
     await this.prisma.usageLog.create({
       data: {
@@ -512,7 +525,7 @@ export class SearchService {
         country,
         language,
         device,
-        creditsUsed: cached ? 0 : this.creditsPerSearch,
+        creditsUsed: cached ? 0 : (creditsUsed ?? getSearchCreditCost(type)),
         responseTime,
         cached,
         success,

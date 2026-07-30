@@ -6,48 +6,72 @@ const prisma = new PrismaClient();
 async function main() {
   const plans = [
     {
-      name: 'Free',
+      name: 'Grátis',
       tier: PlanTier.FREE,
-      description: 'Plano gratuito com créditos limitados',
+      description: 'Comece com créditos gratuitos ao criar sua conta',
       priceMonthly: 0,
       priceYearly: 0,
-      creditsMonthly: 2500,
-      rateLimit: 10,
+      creditsMonthly: 2700,
+      rateLimit: 20,
       maxApiKeys: 1,
-      features: ['2.500 créditos/mês', '10 req/min', '1 API Key'],
+      features: [
+        '2.700 créditos ao cadastrar',
+        '20 req/min',
+        '1 API Key',
+        'Busca web, imagens, mapas',
+      ],
     },
     {
-      name: 'Starter',
+      name: 'Business',
       tier: PlanTier.STARTER,
-      description: 'Ideal para startups e projetos pequenos',
-      priceMonthly: 4900,
-      priceYearly: 49000,
-      creditsMonthly: 50000,
-      rateLimit: 60,
-      maxApiKeys: 3,
-      features: ['50.000 créditos/mês', '60 req/min', '3 API Keys', 'Suporte email'],
+      description: 'Plano ideal para produção e alto volume',
+      priceMonthly: 19700,
+      priceYearly: 197000,
+      creditsMonthly: 100000,
+      rateLimit: 120,
+      maxApiKeys: 5,
+      features: [
+        '100.000 créditos/mês',
+        '120 req/min',
+        '5 API Keys',
+        'Todas as APIs SERP',
+        'APIs avançadas (Crawl, Research, RAG)',
+        'Suporte prioritário',
+      ],
     },
     {
       name: 'Pro',
       tier: PlanTier.PRO,
-      description: 'Para equipes e aplicações em produção',
-      priceMonthly: 19900,
-      priceYearly: 199000,
-      creditsMonthly: 250000,
-      rateLimit: 300,
-      maxApiKeys: 10,
-      features: ['250.000 créditos/mês', '300 req/min', '10 API Keys', 'Suporte prioritário', 'Batch search'],
+      description: 'Para equipes com demanda elevada',
+      priceMonthly: 49700,
+      priceYearly: 497000,
+      creditsMonthly: 350000,
+      rateLimit: 400,
+      maxApiKeys: 15,
+      features: [
+        '350.000 créditos/mês',
+        '400 req/min',
+        '15 API Keys',
+        'Batch search ilimitado',
+        'Suporte dedicado',
+      ],
     },
     {
       name: 'Enterprise',
       tier: PlanTier.ENTERPRISE,
-      description: 'Solução customizada para grandes volumes',
-      priceMonthly: 99900,
-      priceYearly: 999000,
+      description: 'Volume customizado e SLA',
+      priceMonthly: 99700,
+      priceYearly: 997000,
       creditsMonthly: 2000000,
       rateLimit: 1000,
       maxApiKeys: 50,
-      features: ['2M créditos/mês', '1000 req/min', '50 API Keys', 'SLA 99.9%', 'Dedicated support'],
+      features: [
+        '2M+ créditos/mês',
+        '1000 req/min',
+        '50 API Keys',
+        'SLA 99.9%',
+        'Infra dedicada',
+      ],
     },
   ];
 
@@ -59,7 +83,7 @@ async function main() {
     });
   }
 
-  const adminEmail = 'admin@serper.local';
+  const adminEmail = 'admin@noviqsearch.local';
   const adminPassword = await bcrypt.hash('Admin@123', 12);
 
   await prisma.user.upsert({
@@ -68,14 +92,14 @@ async function main() {
     create: {
       email: adminEmail,
       passwordHash: adminPassword,
-      name: 'Administrador',
+      name: 'Administrador NoviqSearch',
       role: 'SUPER_ADMIN',
       credits: 1000000,
       emailVerified: true,
     },
   });
 
-  console.log('Seed completed successfully');
+  console.log('NoviqSearch seed completed');
 }
 
 main()

@@ -50,8 +50,8 @@ export class BillingService {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: plan.stripePriceId!, quantity: 1 }],
-      success_url: `${this.configService.get<string>('app.publicUrl', 'http://localhost:3000')}/billing/success`,
-      cancel_url: `${this.configService.get<string>('app.publicUrl', 'http://localhost:3000')}/billing/cancel`,
+      success_url: `${this.configService.get<string>('app.publicUrl', 'http://localhost:3000').replace('api.', '')}/billing/success`,
+      cancel_url: `${this.configService.get<string>('app.publicUrl', 'http://localhost:3000').replace('api.', '')}/billing/cancel`,
       metadata: { userId, planId },
     });
 
