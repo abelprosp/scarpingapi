@@ -91,3 +91,26 @@ sudo certbot renew --dry-run
 ```
 
 Certbot costuma configurar cron automático.
+
+## Frontend (noviqsearch.online)
+
+O container `web` expõe o Next.js em `127.0.0.1:3080` por padrão (`WEB_PORT=3080` no `.env`).
+
+```bash
+docker compose up -d --build web
+sudo cp docker/nginx/noviqsearch.online.conf /etc/nginx/sites-available/noviqsearch.online
+sudo ln -sf /etc/nginx/sites-available/noviqsearch.online /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Conflito de porta
+
+Se `docker compose up` falhar com *port is already allocated*:
+
+```bash
+sudo ss -tlnp | grep 3080
+docker ps
+```
+
+- **Correção rápida:** pare o processo/container que ocupa a porta, ou defina `WEB_PORT=<porta livre>` no `.env`, ajuste `proxy_pass` em `docker/nginx/noviqsearch.online.conf` para a mesma porta, recarregue o nginx e suba de novo: `docker compose up -d web`.
+- Grafana (profile `monitoring`) usa `127.0.0.1:3001` — evite reutilizar `3001` para o frontend.

@@ -28,8 +28,10 @@ Configure `NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1` (API NestJS rodando
 docker compose up -d --build web api
 ```
 
-- Frontend: `http://localhost:3001` (ou `noviqsearch.online` via nginx)
+- Frontend: `http://localhost:3080` (ou `noviqsearch.online` via nginx)
 - API: `https://api.noviqsearch.online/api/v1`
+
+**Conflito de porta:** o container `web` usa `WEB_PORT` (padrão `3080`). Se essa porta já estiver em uso na VPS, defina outro valor em `.env` (ex.: `WEB_PORT=3081`) e atualize `proxy_pass` em `docker/nginx/noviqsearch.online.conf` para a mesma porta antes de recarregar o nginx.
 
 ## Páginas
 
