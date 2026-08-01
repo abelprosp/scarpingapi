@@ -1,110 +1,136 @@
 'use client';
 
 import Link from 'next/link';
+import { WHATSAPP_URL } from '@/lib/api';
 
-const WEB_SEARCH_CREDITS = 2;
-
-function costPerWebSearchMonthly(): string {
-  const perCredit = 197 / 70000;
-  return (perCredit * WEB_SEARCH_CREDITS).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 4,
-  });
-}
-
-function costPerWebSearchAvulso(): string {
-  return ((5 / 500) * WEB_SEARCH_CREDITS).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-  });
-}
+const plans = [
+  {
+    name: 'Gratuito',
+    price: 'R$ 0',
+    period: '',
+    credits: '2.700 créditos de inteligência',
+    hint: 'Ao criar conta — sem cartão',
+    features: [
+      'Search, News, Images',
+      'Swagger e documentação',
+      '1 API Key',
+      'Ideal para protótipos de agentes',
+    ],
+    cta: 'Começar grátis',
+    href: '/register',
+    highlight: false,
+  },
+  {
+    name: 'Business Launch',
+    price: 'R$ 197',
+    period: '/mês',
+    credits: '70.000 créditos/mês',
+    hint: 'Oferta de lançamento — early adopters',
+    features: [
+      'Todas as APIs ativas',
+      'Research & Deep Research',
+      'Crawl, Extract, Browser',
+      'RAG, Embeddings, Agent API',
+      'Pay-as-you-go via PIX',
+    ],
+    cta: 'Assinar via dashboard',
+    href: '/register',
+    highlight: true,
+  },
+  {
+    name: 'Pay-as-you-go',
+    price: 'R$ 5',
+    period: '/ pacote',
+    credits: '500 créditos avulsos',
+    hint: 'Sem validade — complementa qualquer plano',
+    features: [
+      'Créditos de inteligência pré-pagos',
+      'PIX instantâneo',
+      'Sem assinatura obrigatória',
+      'Overage automático opcional',
+    ],
+    cta: 'Comprar créditos',
+    href: '/register',
+    highlight: false,
+  },
+];
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="bg-white py-24 text-zinc-900">
+    <section id="pricing" className="border-y border-border/60 bg-white py-24 text-gray-900">
       <div className="mx-auto max-w-6xl px-4">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Simples e previsível.</h2>
-          <p className="mx-auto mt-3 max-w-xl text-zinc-500">
-            Comece grátis ou escolha o plano mensal para alto volume.
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+            Créditos de inteligência para cada estágio
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-gray-600">
+            Grátis para experimentar. Business Launch para escalar. Avulso quando precisar de mais.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {/* Teste Grátis */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-800">Teste Grátis</h3>
-            <div className="mt-6">
-              <span className="text-4xl font-bold">R$ 0</span>
-            </div>
-            <p className="mt-2 text-sm text-zinc-500">2.700 créditos · sem cartão</p>
-            <ul className="mt-8 space-y-3 text-sm text-zinc-600">
-              <li>✓ Acesso imediato ao painel</li>
-              <li>✓ API Key em minutos</li>
-              <li>✓ Swagger docs incluído</li>
-              <li>✓ Sem validade no trial</li>
-            </ul>
-            <Link
-              href="/register"
-              className="mt-8 block w-full rounded-xl bg-zinc-900 py-3.5 text-center text-sm font-semibold text-white hover:bg-zinc-800"
+        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`relative rounded-2xl border p-6 ${
+                plan.highlight
+                  ? 'border-purple-500 bg-white shadow-lg shadow-purple-500/10'
+                  : 'border-gray-200 bg-gray-50'
+              }`}
             >
-              Testar grátis — 2.700 créditos
-            </Link>
-          </div>
+              {plan.highlight && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-purple-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+                  Mais popular
+                </span>
+              )}
+              <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
+                {plan.period && <span className="text-gray-500">{plan.period}</span>}
+              </div>
+              <p className="mt-2 text-sm font-medium text-purple-600">{plan.credits}</p>
+              <p className="mt-1 text-xs text-gray-500">{plan.hint}</p>
+              <ul className="mt-6 space-y-2 text-sm text-gray-600">
+                {plan.features.map((f) => (
+                  <li key={f}>✓ {f}</li>
+                ))}
+              </ul>
+              <Link
+                href={plan.href}
+                className={`mt-8 block w-full rounded-xl py-3 text-center text-sm font-semibold ${
+                  plan.highlight
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'border border-gray-300 text-gray-900 hover:border-purple-500'
+                }`}
+              >
+                {plan.cta}
+              </Link>
+            </div>
+          ))}
+        </div>
 
-          {/* Plano Mensal */}
-          <div className="relative rounded-2xl border-2 border-violet-500 bg-white p-8 shadow-lg shadow-violet-100">
-            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-violet-600 px-4 py-1 text-xs font-bold uppercase tracking-wide text-white">
-              Mais popular
-            </span>
-            <h3 className="text-lg font-semibold text-zinc-800">Plano Mensal</h3>
-            <div className="mt-6 flex items-baseline gap-1">
-              <span className="text-4xl font-bold">R$ 197</span>
-              <span className="text-zinc-500">/ mês</span>
-            </div>
-            <p className="mt-2 text-sm font-medium text-violet-700">70.000 créditos por mês</p>
-            <p className="mt-1 text-xs text-zinc-400">
-              ≈ {costPerWebSearchMonthly()} por busca web simples
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+            <h3 className="font-semibold text-gray-900">Roadmap de planos (Phase 2)</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Starter <strong>R$ 39</strong> · Pro <strong>R$ 149</strong> · Business{' '}
+              <strong>R$ 499</strong> — tiers completos documentados em{' '}
+              <code className="text-purple-600">docs/roadmap-phases.md</code>.
             </p>
-            <ul className="mt-8 space-y-3 text-sm text-zinc-600">
-              <li>✓ 70k créditos renovados todo mês</li>
-              <li>✓ Ideal para produção e automações</li>
-              <li>✓ Consumo avulso opcional após o limite</li>
-              <li>✓ Suporte prioritário</li>
-              <li>✓ Cancele quando quiser</li>
-            </ul>
-            <Link
-              href="/register"
-              className="mt-8 block w-full rounded-xl bg-zinc-900 py-3.5 text-center text-sm font-semibold text-white hover:bg-zinc-800"
-            >
-              Assinar plano mensal
-            </Link>
           </div>
-
-          {/* Avulso */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-800">Avulso</h3>
-            <div className="mt-6">
-              <span className="text-4xl font-bold">R$ 5</span>
-              <span className="text-zinc-500"> / 500 créditos</span>
-            </div>
-            <p className="mt-2 text-xs text-zinc-400">
-              ≈ {costPerWebSearchAvulso()} por busca web simples
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+            <h3 className="font-semibold text-gray-900">Enterprise</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              SSO, SLA, IP allowlist, white-label e volume customizado para times e integradores.
             </p>
-            <ul className="mt-8 space-y-3 text-sm text-zinc-600">
-              <li>✓ Pague só pelo que usar</li>
-              <li>✓ Sem mensalidade</li>
-              <li>✓ Créditos sem validade</li>
-              <li>✓ Compre pelo painel via PIX</li>
-            </ul>
-            <Link
-              href="/register"
-              className="mt-8 block w-full rounded-xl border-2 border-zinc-900 py-3.5 text-center text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-block text-sm font-semibold text-purple-600 hover:underline"
             >
-              Comprar créditos
-            </Link>
+              Falar com vendas →
+            </a>
           </div>
         </div>
       </div>

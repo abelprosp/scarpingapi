@@ -1,6 +1,10 @@
-# Serper Platform
+# NoviqSearch
 
-Plataforma SaaS de API de busca em motores de pesquisa (SERP API) com arquitetura moderna, escalável e preparada para produção.
+**Infraestrutura de recuperação de conhecimento para IA** — a plataforma brasileira para conectar agentes de IA ao mundo.
+
+Web Intelligence Platform para agentes, automações, chatbots, MCP, LangChain e SaaS builders: Search, Deep Research, Crawl, Browser, Embeddings, RAG e MCP Server.
+
+> Visão completa: [docs/product-vision.md](docs/product-vision.md) · Módulos: [docs/api-modules.md](docs/api-modules.md) · Fases: [docs/roadmap-phases.md](docs/roadmap-phases.md)
 
 ## Stack
 
@@ -10,10 +14,11 @@ Plataforma SaaS de API de busca em motores de pesquisa (SERP API) com arquitetur
 | Banco | PostgreSQL, Prisma ORM |
 | Cache/Fila | Redis, BullMQ |
 | Browser | Playwright, Puppeteer |
-| Auth | JWT, API Keys, OAuth2-ready |
-| Billing | Stripe |
+| Auth | JWT, API Keys |
+| Billing | PIX (EFI) |
 | Monitoramento | Prometheus, Grafana, Sentry |
-| Infra | Docker, Kubernetes, Nginx, Cloudflare-ready |
+| Agentes | MCP Server oficial, SDK JS |
+| Infra | Docker, Kubernetes, Nginx |
 
 ## Início Rápido
 
@@ -27,220 +32,106 @@ Plataforma SaaS de API de busca em motores de pesquisa (SERP API) com arquitetur
 ### Instalação
 
 ```bash
-# Clonar e instalar dependências
 npm install
-
-# Configurar ambiente
 cp .env.example .env
-
-# Subir infraestrutura
 docker compose up -d postgres redis
-
-# Migrar banco e seed
-npx prisma migrate dev --name init
+npx prisma migrate dev
 npm run prisma:seed
-
-# Instalar browsers (Playwright)
 npx playwright install chromium
-
-# Desenvolvimento
 npm run start:dev
 ```
 
-A API estará disponível em `http://localhost:3000/api/v1`  
-Documentação Swagger em `http://localhost:3000/docs`
+API: `http://localhost:3000/api/v1` · Swagger: `http://localhost:3000/docs`
 
-### Credenciais padrão (seed)
+### Credenciais seed
 
-- **Email:** admin@serper.local
+- **Email:** admin@noviqsearch.local
 - **Senha:** Admin@123
 
-## Endpoints
+## Endpoints principais
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/search` | Pesquisa web |
-| POST | `/images` | Pesquisa de imagens |
-| POST | `/news` | Pesquisa de notícias |
-| POST | `/shopping` | Shopping |
-| POST | `/videos` | Vídeos |
-| POST | `/maps` | Mapas |
-| POST | `/places` | Locais |
-| POST | `/autocomplete` | Autocomplete |
-| POST | `/related-searches` | Pesquisas relacionadas |
-| POST | `/knowledge-graph` | Knowledge Graph |
-| POST | `/reverse-image` | Busca reversa de imagem |
-| POST | `/batch` | Busca em lote |
-| GET | `/credits` | Créditos disponíveis |
-| GET | `/usage` | Histórico de uso |
-| GET | `/health` | Health check |
-| GET | `/status` | Status da plataforma |
+| POST | `/search` | Busca web |
+| POST | `/images` `/news` `/videos` `/shopping` `/maps` | Módulos SERP |
+| POST | `/research` | Pesquisa com síntese |
+| POST | `/deep-research` | Pesquisa profunda |
+| POST | `/agent` | Agente por goal |
+| POST | `/crawl` `/extract` `/prepare` | Conteúdo web |
+| POST | `/embeddings` | Vetores |
+| POST | `/memory` `/memory/query` | Memória de agentes |
+| POST | `/rag/*` `/browser/navigate` | RAG e browser |
+| GET | `/capabilities` | Catálogo de APIs |
 
 ## Autenticação
-
-### JWT Bearer Token
-
-```bash
-curl -X POST http://localhost:3000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@serper.local","password":"Admin@123"}'
-```
-
-### API Key
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/search \
   -H "Content-Type: application/json" \
   -H "X-API-Key: sk_your_api_key" \
-  -d '{"q":"nestjs tutorial","gl":"br","hl":"pt"}'
+  -d '{"q":"agentes de IA Brasil","gl":"br","hl":"pt"}'
 ```
 
-## Exemplo de Busca
+## MCP Server
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/search \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{
-    "q": "inteligência artificial brasil",
-    "gl": "br",
-    "hl": "pt",
-    "num": 10
-  }'
+cd packages/mcp-server && npm install
+NOVIQ_API_KEY=sk_... npm run dev
 ```
 
-## Arquitetura
+Ver [packages/mcp-server/README.md](packages/mcp-server/README.md) e [docs/integrations.md](docs/integrations.md).
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Cliente   │────▶│   Nginx     │────▶│  NestJS API │
-└─────────────┘     └─────────────┘     └──────┬──────┘
-                                               │
-                    ┌──────────────────────────┼──────────────────────────┐
-                    │                          │                          │
-              ┌─────▼─────┐           ┌──────▼──────┐           ┌──────▼──────┐
-              │   Redis   │           │  PostgreSQL │           │  Playwright │
-              │ Cache/Queue│           │   Prisma    │           │  Browser    │
-              └───────────┘           └─────────────┘           └─────────────┘
+## SDK JavaScript
+
+```bash
+cd packages/sdk-js && npm install && npm run build
 ```
 
-### Módulos
-
-- **search** — Orquestração de buscas e endpoints REST
-- **parser** — Parsers modulares (Google, News, Images, Videos, Shopping, Maps)
-- **cache** — Cache inteligente Redis com TTL por query/idioma/país/dispositivo
-- **proxy** — Proxy Manager com rotação, health check, geo targeting, failover
-- **browser** — Pool de browsers headless com anti-bot
-- **ai** — Normalização, deduplicação, classificação de relevância
-- **auth** — JWT + API Keys + RBAC
-- **billing** — Planos, Stripe, webhooks, créditos
-- **dashboard** — Métricas administrativas
-- **queue** — BullMQ para processamento assíncrono/batch
+```ts
+import { NoviqClient } from '@noviqsearch/sdk';
+const noviq = new NoviqClient({ apiKey: 'sk_...' });
+await noviq.agent('Descobrir fornecedores de aço');
+```
 
 ## Planos
 
-| Plano | Créditos/mês | Rate Limit | API Keys |
-|-------|-------------|------------|----------|
-| Free | 2.500 | 10/min | 1 |
-| Starter | 50.000 | 60/min | 3 |
-| Pro | 250.000 | 300/min | 10 |
-| Enterprise | 2.000.000 | 1000/min | 50 |
+| Plano | Preço | Créditos |
+|-------|-------|----------|
+| Gratuito | R$ 0 | 500 |
+| Starter | R$ 39/mês | 12.000 |
+| Pro | R$ 149/mês | 50.000 |
+| Business | R$ 499/mês | 200.000 |
+| Enterprise | Custom | SLA / white-label |
+| Avulso | R$ 5 | 500 créditos |
 
-## Monitoramento
+Detalhes: [docs/billing-pricing.md](docs/billing-pricing.md)
 
-- **Prometheus:** `http://localhost:9090`
-- **Grafana:** `http://localhost:3001` (admin/admin)
-- **Métricas API:** `GET /api/v1/metrics`
+## IA (opcional)
+
+```env
+AI_ENABLED=true
+OPENAI_API_KEY=sk-...
+```
+
+Ativa síntese LLM em Research, Deep Research, Agent e embeddings reais.
 
 ## Deploy
 
-### Docker Compose (produção)
-
 ```bash
 cp .env.production.example .env
-# Edite .env com senhas fortes
-
-docker compose down
 docker compose up -d --build
-
-# Com monitoramento (Prometheus + Grafana)
-docker compose --profile monitoring up -d
 ```
 
-**Importante:** Postgres e Redis **não expõem portas** no host — evita conflito com Redis/PostgreSQL já instalados na VPS. A API se conecta pela rede interna Docker.
+Domínio: `https://api.noviqsearch.online` — guia em [docs/vps-domain-setup.md](docs/vps-domain-setup.md)
 
-Se a porta 80 estiver ocupada, defina no `.env`:
-```
-HTTP_PORT=8080
-```
+## Documentação
 
-### Primeiro deploy na VPS
-
-```bash
-git pull
-docker compose down --remove-orphans
-cp .env.production.example .env   # se ainda não tiver
-nano .env                         # POSTGRES_PASSWORD, JWT_SECRET, API_PORT=8080
-
-docker compose up -d --build
-docker compose logs -f api
-```
-
-A API fica em `http://SEU_IP:8080/api/v1` (porta configurável via `API_PORT`).
-
-**Domínio de produção:** `https://api.noviqsearch.online/api/v1`  
-Guia completo: [docs/vps-domain-setup.md](docs/vps-domain-setup.md)
-
-O container **nginx** é opcional (`--profile bundled-nginx`). Se a porta 80 já estiver em uso na VPS, **não use o nginx do compose** — use o nginx do host como reverse proxy:
-
-```bash
-# Copiar config pronta (SSL)
-sudo cp docker/nginx/api.noviqsearch.online.conf /etc/nginx/sites-available/api.noviqsearch.online
-sudo ln -sf /etc/nginx/sites-available/api.noviqsearch.online /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-Config mínima (sem SSL, proxy para Docker na 8080):
-
-```nginx
-# /etc/nginx/sites-available/api.noviqsearch.online
-server {
-    listen 80;
-    server_name api.noviqsearch.online;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-### Kubernetes
-
-```bash
-kubectl apply -f k8s/
-```
-
-## Testes
-
-```bash
-npm run test          # Unitários
-npm run test:e2e      # End-to-end
-npm run test:cov      # Cobertura
-```
-
-## Segurança
-
-- Rate limiting por IP e API Key
-- RBAC (USER, ADMIN, SUPER_ADMIN)
-- API Keys com hash bcrypt
-- Auditoria de ações (LGPD-ready)
-- Helmet + CORS + validação de input
+- [Visão & Roadmap](docs/vision-roadmap.md)
+- [APIs avançadas](docs/advanced-apis.md)
+- [Integrações](docs/integrations.md)
+- [Billing](docs/billing-pricing.md)
+- [Arquitetura](docs/architecture.md)
 
 ## Licença
 
 MIT
-# scarpingapi

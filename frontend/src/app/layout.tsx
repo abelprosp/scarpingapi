@@ -13,12 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NoviqSearch — API de Busca e Dados Web',
+  title: 'NoviqSearch — Infraestrutura de recuperação de conhecimento para IA',
   description:
-    'API SERP com 2.700 créditos grátis. Plano mensal R$ 197/mês com 70.000 créditos. Avulso R$ 5/500 créditos.',
+    'A plataforma brasileira para conectar agentes de IA ao mundo. Search, Deep Research, Crawl, Browser, RAG, MCP e créditos de inteligência.',
   openGraph: {
-    title: 'NoviqSearch',
-    description: 'API de busca para desenvolvedores — 2.700 créditos grátis ao cadastrar.',
+    title: 'NoviqSearch — Web Intelligence Platform',
+    description:
+      'Infraestrutura de recuperação de conhecimento para agentes de IA, automações e SaaS builders.',
     url: 'https://noviqsearch.online',
   },
 };

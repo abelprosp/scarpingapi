@@ -12,7 +12,9 @@ export function Navbar() {
           {APP_NAME}
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-muted md:flex">
-          <a href="#features" className="hover:text-foreground">Recursos</a>
+          <a href="#features" className="hover:text-foreground">Módulos</a>
+          <a href="#audience" className="hover:text-foreground">Para agentes</a>
+          <a href="#moat" className="hover:text-foreground">Por que Noviq</a>
           <a href="#pricing" className="hover:text-foreground">Planos</a>
           <a href="#credits" className="hover:text-foreground">Créditos</a>
         </nav>
