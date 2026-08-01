@@ -4,8 +4,11 @@
 
 | Plano | Preço | Créditos |
 |-------|-------|----------|
-| Teste Grátis | R$ 0 | 2.700 ao cadastrar |
-| Plano Mensal | R$ 197/mês | 70.000/mês (renovação) |
+| Gratuito | R$ 0 | 500 ao cadastrar |
+| Starter | R$ 39/mês | 12.000/mês |
+| Pro | R$ 149/mês | 50.000/mês |
+| Business | R$ 499/mês | 200.000/mês |
+| Enterprise | Personalizado | Volume / SLA / white-label |
 | Avulso | R$ 5 | 500 créditos (sem validade) |
 
 ## Consumo por operação
@@ -14,41 +17,40 @@
 |----------|----------|
 | Busca web | 2 |
 | Imagens / News / Vídeos | 3 |
+| Shopping / Reverse image | 4 |
 | Mapas / Locais | 5 |
+| Extract / Embeddings / Prepare / Memory | 5 |
+| Screenshot / PDF / RAG query | 8 |
+| Browser | 10 |
+| Crawl / AI Search / Agent / RAG index | 15 |
 | Research | 25 |
 | Deep Research | 60 |
 
 ## Lógica de débito
 
 ### Usuário sem assinatura
-Consome do saldo `credits` (trial 2.700 + pacotes avulsos comprados).
+Consome do saldo `credits` (trial 500 + pacotes avulsos).
 
-### Assinante Plano Mensal (STARTER)
-1. Primeiro consome a **franquia mensal** (`monthlyCreditsUsed` até 70.000).
-2. Depois consome **créditos avulsos** do saldo `credits`.
-3. Se **pay-as-you-go** estiver ativo e franquia + saldo esgotados:
-   - Acumula em `overageCreditsPending`.
-   - A cada **500 créditos** de overage → cobrança **R$ 5** via PIX.
-   - Bloqueia novo overage até pagar o bloco pendente.
-
-### Pay-as-you-go
-Ative em `PATCH /billing/pay-as-you-go` com `{ "enabled": true }`.
+### Assinante (Starter / Pro / Business)
+1. Consome a franquia mensal.
+2. Depois consome créditos avulsos.
+3. Se pay-as-you-go ativo e franquia + saldo esgotados → blocos de 500 créditos a R$ 5 via PIX.
 
 ## Endpoints
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/billing/profile` | Saldo, uso mensal, overage, PIX pendentes |
-| PATCH | `/billing/pay-as-you-go` | Ativar/desativar consumo avulso |
-| POST | `/billing/pix/subscribe` | PIX plano R$ 197 |
-| POST | `/billing/pix/buy-credits` | PIX pacote R$ 5/500 |
-| POST | `/billing/pix/overage` | PIX overage pendente |
-| GET | `/users/me/billing-status` | Status detalhado |
+| GET | `/billing/plans` | Listar planos |
+| GET | `/billing/profile` | Saldo e uso |
+| PATCH | `/billing/pay-as-you-go` | Ativar PAYG |
+| POST | `/billing/pix/subscribe` | PIX assinatura (`{ "tier": "STARTER" \| "PRO" \| "ENTERPRISE" }`) |
+| POST | `/billing/pix/buy-credits` | PIX pacote |
+| POST | `/billing/pix/overage` | PIX overage |
 
-## Variáveis de ambiente
+## Variáveis
 
 ```env
-DEFAULT_FREE_CREDITS=2700
+DEFAULT_FREE_CREDITS=500
 CREDIT_PACK_PRICE_CENTS=500
 CREDIT_PACK_CREDITS=500
 OVERAGE_BLOCK_CREDITS=500

@@ -1,8 +1,8 @@
 {
-  "name": "serper-platform",
+  "name": "noviqsearch",
   "version": "1.0.0",
-  "description": "SaaS SERP API Platform - Search Engine Results API",
-  "author": "Serper Platform",
+  "description": "NoviqSearch — infraestrutura brasileira de recuperação de conhecimento para agentes de IA",
+  "author": "NoviqSearch",
   "private": true,
   "license": "MIT",
   "scripts": {

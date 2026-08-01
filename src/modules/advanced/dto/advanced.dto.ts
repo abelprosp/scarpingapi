@@ -268,3 +268,68 @@ export class BrowserNavigateDto {
   @Type(() => BrowserActionDto)
   actions?: BrowserActionDto[];
 }
+
+export class AgentDto {
+  @ApiProperty({ example: 'Descobrir fornecedores de aço no Brasil' })
+  @IsString()
+  goal!: string;
+
+  @ApiPropertyOptional({ default: 'br' })
+  @IsOptional()
+  @IsString()
+  gl?: string;
+
+  @ApiPropertyOptional({ default: 'pt' })
+  @IsOptional()
+  @IsString()
+  hl?: string;
+
+  @ApiPropertyOptional({ default: 3, description: 'Máximo de etapas de busca' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  maxSteps?: number;
+}
+
+export class EmbeddingsDto {
+  @ApiProperty({
+    description: 'Texto ou lista de textos',
+    example: ['fornecedores de aço', 'mercado brasileiro'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  input!: string[];
+}
+
+export class PrepareContentDto {
+  @ApiProperty({ example: 'https://example.com/article' })
+  @IsUrl()
+  url!: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  includeChunks?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  includeEmbeddings?: boolean;
+}
+
+export class MemoryStoreDto {
+  @ApiProperty({ example: 'empresa-acme' })
+  @IsString()
+  key!: string;
+
+  @ApiProperty({ example: { company: 'ACME', links: ['https://acme.com'] } })
+  @IsObject()
+  context!: Record<string, unknown>;
+}
+
+export class MemoryQueryDto {
+  @ApiProperty({ example: 'empresa-acme' })
+  @IsString()
+  key!: string;
+}

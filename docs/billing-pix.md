@@ -6,8 +6,10 @@ NoviqSearch usa **EFI Pay (Efí/Gerencianet)** como método principal de cobran�
 
 | Produto | Valor | Créditos |
 |---------|-------|----------|
-| Teste Grátis | R$ 0 | 2.700 ao cadastrar |
-| Plano Mensal (STARTER) | R$ 197/mês | 70.000/mês |
+| Gratuito | R$ 0 | 500 ao cadastrar |
+| Starter | R$ 39/mês | 12.000/mês |
+| Pro | R$ 149/mês | 50.000/mês |
+| Business | R$ 499/mês | 200.000/mês |
 | Pacote avulso | R$ 5 | 500 |
 | Overage (pay-as-you-go) | R$ 5 | a cada 500 créditos excedentes |
 
@@ -30,7 +32,7 @@ OVERAGE_BLOCK_CREDITS=500
 
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
-| POST | `/billing/pix/subscribe` | JWT | PIX R$197 — plano mensal |
+| POST | `/billing/pix/subscribe` | JWT | PIX assinatura (`tier`: STARTER/PRO/ENTERPRISE) |
 | POST | `/billing/pix/buy-credits` | JWT | PIX R$5 × N pacotes de 500 créditos |
 | POST | `/billing/pix/overage` | JWT | PIX overage pendente |
 | GET | `/billing/pix/:txid/status` | JWT | Status + polling |

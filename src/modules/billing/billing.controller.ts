@@ -1,10 +1,19 @@
 import { Controller, Get, Post, Body, Req, Headers, RawBodyRequest, UseGuards, Patch, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiPropertyOptional } from '@nestjs/swagger';
 import { FastifyRequest } from 'fastify';
+import { PlanTier } from '@prisma/client';
+import { IsEnum, IsOptional } from 'class-validator';
 import { BillingService } from './billing.service';
 import { PixBillingService } from './pix-billing.service';
 import { CombinedAuthGuard } from '../auth/guards/combined-auth.guard';
 import { Public, CurrentUser, AuthenticatedUser } from '../../common/decorators/auth.decorator';
+
+class SubscribePixDto {
+  @ApiPropertyOptional({ enum: PlanTier, default: PlanTier.STARTER })
+  @IsOptional()
+  @IsEnum(PlanTier)
+  tier?: PlanTier;
+}
 
 @ApiTags('Billing')
 @Controller('billing')
@@ -43,9 +52,9 @@ export class BillingController {
   @Post('pix/subscribe')
   @UseGuards(CombinedAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Criar PIX para plano mensal R$197' })
-  pixSubscribe(@CurrentUser() user: AuthenticatedUser) {
-    return this.pixBilling.subscribePix(user.id);
+  @ApiOperation({ summary: 'Criar PIX para assinatura (Starter/Pro/Business)' })
+  pixSubscribe(@CurrentUser() user: AuthenticatedUser, @Body() body: SubscribePixDto) {
+    return this.pixBilling.subscribePix(user.id, body?.tier ?? PlanTier.STARTER);
   }
 
   @Post('pix/buy-credits')

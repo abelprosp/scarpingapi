@@ -6,7 +6,9 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-lg font-bold">{APP_NAME}</p>
-          <p className="mt-1 text-sm text-muted">API de busca e dados web para desenvolvedores.</p>
+          <p className="mt-1 text-sm text-muted">
+            Infraestrutura brasileira de recuperação de conhecimento para agentes de IA.
+          </p>
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-muted">
           <a href="https://api.noviqsearch.online/docs" target="_blank" rel="noreferrer" className="hover:text-accent">

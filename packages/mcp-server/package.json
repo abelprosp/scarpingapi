@@ -1,0 +1,27 @@
+{
+  "name": "@noviqsearch/mcp-server",
+  "version": "1.0.0",
+  "description": "Servidor MCP oficial da NoviqSearch — conecta agentes de IA à Web Intelligence Platform",
+  "type": "module",
+  "bin": {
+    "noviqsearch-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

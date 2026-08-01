@@ -1,8 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, BillingProfile, formatBRL, formatCredits, PixPayment } from '@/lib/api';
+import { api, BillingProfile, formatCredits, PixPayment } from '@/lib/api';
 import { useRequireAuth } from '@/lib/auth';
+
+type PaidTier = 'STARTER' | 'PRO' | 'ENTERPRISE';
+
+const paidPlans: Array<{
+  tier: PaidTier;
+  name: string;
+  price: string;
+  credits: string;
+  highlight?: boolean;
+}> = [
+  { tier: 'STARTER', name: 'Starter', price: 'R$ 39', credits: '12.000 créditos/mês' },
+  { tier: 'PRO', name: 'Pro', price: 'R$ 149', credits: '50.000 créditos/mês', highlight: true },
+  { tier: 'ENTERPRISE', name: 'Business', price: 'R$ 499', credits: '200.000 créditos/mês' },
+];
 
 export default function BillingPageContent() {
   useRequireAuth();
@@ -49,7 +63,11 @@ export default function BillingPageContent() {
     try {
       await api.setPayAsYouGo(next);
       setPayg(next);
-      setMessage(next ? 'Consumo avulso ativado — após 70k/mês cobramos R$5 a cada 500 créditos.' : 'Consumo avulso desativado.');
+      setMessage(
+        next
+          ? 'Consumo avulso ativado — cobramos R$5 a cada 500 créditos extras via PIX.'
+          : 'Consumo avulso desativado.',
+      );
       loadProfile();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Erro');
@@ -58,15 +76,12 @@ export default function BillingPageContent() {
     }
   }
 
-  async function handlePix(action: 'subscribe' | 'credits' | 'overage', qty = 1) {
-    setLoading(action);
+  async function handleSubscribe(tier: PaidTier) {
+    setLoading(tier);
     setMessage('');
     setActivePix(null);
     try {
-      let pix: PixPayment;
-      if (action === 'subscribe') pix = await api.pixSubscribe();
-      else if (action === 'overage') pix = await api.pixOverage();
-      else pix = await api.pixBuyCredits(qty);
+      const pix = await api.pixSubscribe(tier);
       setActivePix(pix);
       setMessage('PIX gerado — escaneie o QR Code ou copie o código.');
     } catch (err) {
@@ -76,14 +91,33 @@ export default function BillingPageContent() {
     }
   }
 
-  const monthlyPct = profile && profile.monthlyAllowance > 0
-    ? Math.min(100, (profile.monthlyUsed / profile.monthlyAllowance) * 100)
-    : 0;
+  async function handlePix(action: 'credits' | 'overage', qty = 1) {
+    setLoading(action);
+    setMessage('');
+    setActivePix(null);
+    try {
+      const pix =
+        action === 'overage' ? await api.pixOverage() : await api.pixBuyCredits(qty);
+      setActivePix(pix);
+      setMessage('PIX gerado — escaneie o QR Code ou copie o código.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Erro ao gerar PIX');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  const monthlyPct =
+    profile && profile.monthlyAllowance > 0
+      ? Math.min(100, (profile.monthlyUsed / profile.monthlyAllowance) * 100)
+      : 0;
 
   return (
     <div>
       <h1 className="text-2xl font-bold">Planos & Billing</h1>
-      <p className="mt-1 text-muted">Plano mensal R$ 197 · 70.000 créditos · Avulso R$ 5/500</p>
+      <p className="mt-1 text-muted">
+        Starter R$ 39 · Pro R$ 149 · Business R$ 499 · Avulso R$ 5/500
+      </p>
 
       {message && (
         <div className="mt-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
@@ -116,7 +150,7 @@ export default function BillingPageContent() {
       {profile && profile.monthlyAllowance > 0 && (
         <div className="mt-6 rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between text-sm">
-            <span>Uso mensal (70k incluídos)</span>
+            <span>Uso da franquia mensal</span>
             <span>{monthlyPct.toFixed(0)}%</span>
           </div>
           <div className="mt-2 h-3 overflow-hidden rounded-full bg-border">
@@ -130,7 +164,7 @@ export default function BillingPageContent() {
           <div>
             <h2 className="font-semibold">Consumo avulso (pay-as-you-go)</h2>
             <p className="mt-1 text-sm text-muted">
-              Após esgotar os 70k mensais, cobramos R$ 5 a cada 500 créditos extras via PIX.
+              Após esgotar a franquia mensal, cobramos R$ 5 a cada 500 créditos extras via PIX.
             </p>
           </div>
           <button
@@ -138,28 +172,44 @@ export default function BillingPageContent() {
             disabled={loading === 'payg'}
             className={`relative h-7 w-12 rounded-full transition ${payg ? 'bg-accent' : 'bg-border'}`}
           >
-            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${payg ? 'left-5' : 'left-0.5'}`} />
+            <span
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${payg ? 'left-5' : 'left-0.5'}`}
+            />
           </button>
         </div>
       </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-violet-500/40 bg-violet-500/5 p-6">
-          <h3 className="font-bold">Plano Mensal</h3>
-          <p className="mt-2 text-2xl font-bold">R$ 197<span className="text-sm font-normal text-muted">/mês</span></p>
-          <p className="text-sm text-violet-400">70.000 créditos/mês</p>
-          <button
-            onClick={() => handlePix('subscribe')}
-            disabled={loading === 'subscribe'}
-            className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+        {paidPlans.map((plan) => (
+          <div
+            key={plan.tier}
+            className={`rounded-xl border p-6 ${
+              plan.highlight ? 'border-accent/50 bg-accent/5' : 'border-border bg-card'
+            }`}
           >
-            {loading === 'subscribe' ? 'Gerando PIX...' : 'Pagar via PIX'}
-          </button>
-        </div>
+            <h3 className="font-bold">{plan.name}</h3>
+            <p className="mt-2 text-2xl font-bold">
+              {plan.price}
+              <span className="text-sm font-normal text-muted">/mês</span>
+            </p>
+            <p className="text-sm text-accent">{plan.credits}</p>
+            <button
+              onClick={() => handleSubscribe(plan.tier)}
+              disabled={loading === plan.tier}
+              className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {loading === plan.tier ? 'Gerando PIX...' : 'Pagar via PIX'}
+            </button>
+          </div>
+        ))}
+      </div>
 
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
           <h3 className="font-bold">Créditos avulsos</h3>
-          <p className="mt-2 text-2xl font-bold">R$ 5<span className="text-sm font-normal text-muted"> / 500 créditos</span></p>
+          <p className="mt-2 text-2xl font-bold">
+            R$ 5<span className="text-sm font-normal text-muted"> / 500 créditos</span>
+          </p>
           <button
             onClick={() => handlePix('credits', 1)}
             disabled={loading === 'credits'}
@@ -179,29 +229,26 @@ export default function BillingPageContent() {
             disabled={loading === 'overage' || !profile?.overagePending}
             className="mt-4 w-full rounded-lg border border-amber-500/50 py-2.5 text-sm font-semibold text-amber-400 disabled:opacity-40"
           >
-            {loading === 'overage' ? 'Gerando PIX...' : 'Pagar overage via PIX'}
+            {loading === 'overage' ? 'Gerando PIX...' : 'Pagar overage'}
           </button>
         </div>
       </div>
 
       {activePix && (
-        <div className="mt-8 rounded-xl border border-accent/40 bg-accent/5 p-6">
-          <h3 className="font-semibold">Pagamento PIX — {formatBRL(activePix.amount)}</h3>
-          <p className="mt-1 text-sm text-muted">{activePix.creditsGranted} créditos · {activePix.type}</p>
+        <div className="mt-8 rounded-xl border border-accent/30 bg-card p-6">
+          <h3 className="font-semibold">PIX ativo — {activePix.status}</h3>
+          <p className="mt-1 text-sm text-muted">
+            Valor: R$ {(activePix.amount / 100).toFixed(2)} · expira {new Date(activePix.expiresAt).toLocaleString('pt-BR')}
+          </p>
           {activePix.qrCode && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={`data:image/png;base64,${activePix.qrCode}`} alt="QR Code PIX" className="mx-auto mt-4 h-48 w-48" />
+            <img
+              src={`data:image/png;base64,${activePix.qrCode}`}
+              alt="QR Code PIX"
+              className="mx-auto mt-4 h-48 w-48 rounded-lg bg-white p-2"
+            />
           )}
-          <div className="mt-4">
-            <p className="text-xs text-muted">Copia e cola:</p>
-            <code className="mt-1 block break-all rounded bg-background p-3 text-xs">{activePix.copyPaste}</code>
-            <button
-              onClick={() => navigator.clipboard.writeText(activePix.copyPaste)}
-              className="mt-2 text-sm text-accent hover:underline"
-            >
-              Copiar código PIX
-            </button>
-          </div>
+          <p className="mt-4 break-all rounded-lg bg-background p-3 font-mono text-xs">{activePix.copyPaste}</p>
         </div>
       )}
     </div>

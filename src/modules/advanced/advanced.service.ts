@@ -23,6 +23,11 @@ import {
   RagIndexDto,
   RagQueryDto,
   BrowserNavigateDto,
+  AgentDto,
+  EmbeddingsDto,
+  PrepareContentDto,
+  MemoryStoreDto,
+  MemoryQueryDto,
 } from './dto/advanced.dto';
 
 @Injectable()
@@ -218,18 +223,21 @@ export class AdvancedApiService {
       snippet: r.description,
     }));
 
-    const summaries = await Promise.all(
-      sources.slice(0, 5).map(async (s) => ({
-        ...s,
-        summary: await this.aiService.summarize(s.snippet ?? s.title, 300),
-      })),
-    );
+    const synthesis = await this.aiService.synthesizeResearch({
+      query: dto.query,
+      sources,
+    });
 
     const report = {
       query: dto.query,
-      summary: summaries.map((s) => s.summary).join('\n\n'),
-      keyFindings: await this.aiService.extractEntities(summaries.map((s) => s.title).join(' ')),
-      sources: summaries,
+      summary: synthesis.summary,
+      keyFindings: synthesis.keyFindings,
+      timeline: synthesis.timeline,
+      people: synthesis.people,
+      companies: synthesis.companies,
+      conclusions: synthesis.conclusions,
+      sources,
+      llm: this.aiService.llmAvailable,
     };
 
     const session = await this.prisma.researchSession.create({
@@ -318,12 +326,28 @@ export class AdvancedApiService {
       (c, i, arr) => arr.findIndex((x) => x.url === c.url) === i,
     );
 
+    const synthesis = await this.aiService.synthesizeResearch({
+      query: dto.query,
+      sources: uniqueCitations.map((c) => ({
+        title: c.title,
+        url: c.url,
+        snippet: c.snippet,
+      })),
+    });
+
     const report = {
       query: dto.query,
       steps: stepReports.join('\n\n'),
-      conclusion: stepReports.join(' ').slice(0, 2000),
+      summary: synthesis.summary,
+      keyFindings: synthesis.keyFindings,
+      timeline: synthesis.timeline,
+      people: synthesis.people,
+      companies: synthesis.companies,
+      conclusions: synthesis.conclusions,
+      conclusion: synthesis.conclusions.join(' ') || synthesis.summary.slice(0, 2000),
       citations: uniqueCitations,
       citationCount: uniqueCitations.length,
+      llm: this.aiService.llmAvailable,
     };
 
     const session = await this.prisma.researchSession.create({
@@ -340,6 +364,188 @@ export class AdvancedApiService {
     });
 
     return { sessionId: session.id, ...report, credits: cost };
+  }
+
+  async agent(user: AuthenticatedUser, dto: AgentDto) {
+    const cost = this.credits.costFor('agent');
+    await this.credits.deduct(user, cost, 'agent');
+
+    const maxSteps = dto.maxSteps ?? 3;
+    const planned = (await this.aiService.planAgentSteps(dto.goal)).slice(0, maxSteps);
+    const findings: Array<{
+      step: number;
+      query: string;
+      results: Array<{ title: string; url: string; snippet?: string }>;
+    }> = [];
+
+    for (let i = 0; i < planned.length; i++) {
+      const query = planned[i];
+      const search = await this.searchService.search(
+        user,
+        SearchType.WEB,
+        { q: query, gl: dto.gl ?? 'br', hl: dto.hl ?? 'pt', num: 6, noCache: true },
+        { skipBilling: true },
+      );
+      const organic = (search.organic ?? []) as WebResult[];
+      findings.push({
+        step: i + 1,
+        query,
+        results: organic.slice(0, 5).map((r) => ({
+          title: r.title,
+          url: r.url,
+          snippet: r.description,
+        })),
+      });
+    }
+
+    const flatSources = findings.flatMap((f) => f.results);
+    const synthesis = await this.aiService.synthesizeResearch({
+      query: dto.goal,
+      sources: flatSources,
+    });
+
+    const report = {
+      goal: dto.goal,
+      plan: planned,
+      findings,
+      summary: synthesis.summary,
+      keyFindings: synthesis.keyFindings,
+      companies: synthesis.companies,
+      people: synthesis.people,
+      conclusions: synthesis.conclusions,
+      sources: flatSources,
+      llm: this.aiService.llmAvailable,
+    };
+
+    const session = await this.prisma.researchSession.create({
+      data: {
+        userId: user.id,
+        query: dto.goal,
+        status: 'COMPLETED',
+        depth: planned.length,
+        report: report as unknown as object,
+        citations: flatSources as unknown as object,
+        creditsUsed: cost,
+        completedAt: new Date(),
+      },
+    });
+
+    return { sessionId: session.id, ...report, credits: cost };
+  }
+
+  async embeddings(user: AuthenticatedUser, dto: EmbeddingsDto) {
+    const cost = this.credits.costFor('embeddings');
+    await this.credits.deduct(user, cost, 'embeddings');
+
+    const input = dto.input.slice(0, 32);
+    const vectors = await this.aiService.embedTexts(input);
+
+    return {
+      model: this.aiService.llmAvailable
+        ? process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small'
+        : 'noviq-hash-v1',
+      dimensions: vectors[0]?.length ?? 0,
+      embeddings: vectors,
+      count: vectors.length,
+      credits: cost,
+    };
+  }
+
+  async prepareContent(user: AuthenticatedUser, dto: PrepareContentDto) {
+    const cost = this.credits.costFor('prepare');
+    await this.credits.deduct(user, cost, 'prepare');
+
+    const html = await this.browser.fetchPage({ url: dto.url });
+    const $ = cheerio.load(html);
+    const title = $('title').text().trim();
+    const author =
+      $('meta[name="author"]').attr('content') ||
+      $('meta[property="article:author"]').attr('content') ||
+      '';
+    const description = $('meta[name="description"]').attr('content') ?? '';
+    const language = $('html').attr('lang') ?? (await this.aiService.detectLanguage(title));
+    const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 50000);
+    const markdown = `# ${title}\n\n${description ? `> ${description}\n\n` : ''}${text}`;
+
+    const chunks =
+      dto.includeChunks === false ? [] : chunkText(markdown, 1000, 100).slice(0, 40);
+    let embeddings: number[][] | undefined;
+    if (dto.includeEmbeddings && chunks.length > 0) {
+      embeddings = await this.aiService.embedTexts(chunks.slice(0, 16));
+    }
+
+    return {
+      url: dto.url,
+      title,
+      author,
+      summary: await this.aiService.summarize(text || description || title, 400),
+      content: text,
+      markdown,
+      language,
+      categories: await this.aiService.extractEntities(`${title} ${description}`),
+      chunks,
+      embeddings,
+      credits: cost,
+    };
+  }
+
+  async storeMemory(user: AuthenticatedUser, dto: MemoryStoreDto) {
+    const cost = this.credits.costFor('memory');
+    await this.credits.deduct(user, cost, 'memory');
+
+    const dataset = await this.ensureMemoryDataset(user.id);
+    await this.prisma.datasetRecord.create({
+      data: {
+        datasetId: dataset.id,
+        data: {
+          key: dto.key,
+          context: dto.context as object,
+          storedAt: new Date().toISOString(),
+        } as object,
+      },
+    });
+    await this.prisma.dataset.update({
+      where: { id: dataset.id },
+      data: { recordCount: { increment: 1 } },
+    });
+
+    return { key: dto.key, stored: true, credits: cost };
+  }
+
+  async getMemory(user: AuthenticatedUser, dto: MemoryQueryDto) {
+    const cost = this.credits.costFor('memory');
+    await this.credits.deduct(user, cost, 'memory');
+
+    const dataset = await this.ensureMemoryDataset(user.id);
+    const records = await this.prisma.datasetRecord.findMany({
+      where: { datasetId: dataset.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    const matches = records
+      .map((r) => r.data as { key?: string; context?: Record<string, unknown>; storedAt?: string })
+      .filter((d) => d.key === dto.key);
+
+    return {
+      key: dto.key,
+      entries: matches,
+      credits: cost,
+    };
+  }
+
+  private async ensureMemoryDataset(userId: string) {
+    const name = '__agent_memory__';
+    const existing = await this.prisma.dataset.findFirst({ where: { userId, name } });
+    if (existing) return existing;
+    return this.prisma.dataset.create({
+      data: {
+        userId,
+        name,
+        description: 'Memória de contexto para agentes Noviq',
+        isPublic: false,
+      },
+    });
   }
 
   async createDataset(user: AuthenticatedUser, dto: DatasetCreateDto) {
@@ -489,18 +695,26 @@ export class AdvancedApiService {
 
   listCapabilities() {
     return {
+      positioning: 'Infraestrutura brasileira de recuperação de conhecimento para agentes de IA',
+      llmEnabled: this.aiService.llmAvailable,
       apis: [
         { name: 'Search API', endpoint: 'POST /search', status: 'active' },
-        { name: 'Research API', endpoint: 'POST /research', status: 'active' },
-        { name: 'Crawl API', endpoint: 'POST /crawl', status: 'active' },
-        { name: 'Extract API', endpoint: 'POST /extract', status: 'active' },
-        { name: 'Screenshot API', endpoint: 'POST /screenshot', status: 'active' },
-        { name: 'PDF API', endpoint: 'POST /pdf', status: 'active' },
-        { name: 'Maps API', endpoint: 'POST /maps', status: 'active' },
+        { name: 'Images API', endpoint: 'POST /images', status: 'active' },
+        { name: 'Videos API', endpoint: 'POST /videos', status: 'active' },
         { name: 'News API', endpoint: 'POST /news', status: 'active' },
         { name: 'Shopping API', endpoint: 'POST /shopping', status: 'active' },
-        { name: 'AI Search API', endpoint: 'POST /ai-search', status: 'active' },
+        { name: 'Maps API', endpoint: 'POST /maps', status: 'active' },
+        { name: 'Research API', endpoint: 'POST /research', status: 'active' },
         { name: 'Deep Research API', endpoint: 'POST /deep-research', status: 'active' },
+        { name: 'Agent API', endpoint: 'POST /agent', status: 'active' },
+        { name: 'AI Search API', endpoint: 'POST /ai-search', status: 'active' },
+        { name: 'Crawl API', endpoint: 'POST /crawl', status: 'active' },
+        { name: 'Extract API', endpoint: 'POST /extract', status: 'active' },
+        { name: 'Prepare Content API', endpoint: 'POST /prepare', status: 'active' },
+        { name: 'Embeddings API', endpoint: 'POST /embeddings', status: 'active' },
+        { name: 'Memory API', endpoint: 'POST /memory', status: 'active' },
+        { name: 'Screenshot API', endpoint: 'POST /screenshot', status: 'active' },
+        { name: 'PDF API', endpoint: 'POST /pdf', status: 'active' },
         { name: 'Dataset API', endpoint: 'POST /dataset/*', status: 'active' },
         { name: 'RAG API', endpoint: 'POST /rag/*', status: 'active' },
         { name: 'Browser API', endpoint: 'POST /browser/navigate', status: 'active' },

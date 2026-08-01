@@ -18,7 +18,7 @@ export class AuthService {
     if (existing) throw new ConflictException('Email já cadastrado');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const freeCredits = this.configService.get<number>('app.defaultFreeCredits', 2700);
+    const freeCredits = this.configService.get<number>('app.defaultFreeCredits', 500);
 
     const user = await this.prisma.user.create({
       data: {

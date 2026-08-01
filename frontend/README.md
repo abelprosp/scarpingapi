@@ -38,19 +38,18 @@ docker compose up -d --build web api
 | Rota | Descrição |
 |------|-----------|
 | `/` | Landing + pricing |
-| `/register` | Cadastro (2.700 créditos grátis) |
+| `/register` | Cadastro (500 créditos grátis) |
 | `/login` | Login |
 | `/dashboard` | Saldo, quick start |
 | `/dashboard/keys` | API Keys |
 | `/dashboard/usage` | Histórico |
-| `/dashboard/billing` | Planos + Stripe checkout |
-| `/billing/success` | Retorno Stripe |
-| `/billing/cancel` | Cancelamento checkout |
+| `/dashboard/billing` | Planos + PIX |
 
 ## Planos
 
 | Plano | Preço | Créditos |
 |-------|-------|----------|
-| Grátis | R$ 0 | 2.700 ao cadastrar |
-| Business | R$ 197/mês | 70.000/mês |
-| Pro | R$ 497/mês | 350.000/mês |
+| Gratuito | R$ 0 | 500 ao cadastrar |
+| Starter | R$ 39/mês | 12.000/mês |
+| Pro | R$ 149/mês | 50.000/mês |
+| Business | R$ 499/mês | 200.000/mês |

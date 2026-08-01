@@ -24,6 +24,8 @@ export function getSearchCreditCost(type: SearchType): number {
 /** Custo em créditos das APIs avançadas */
 export const ADVANCED_CREDIT_COSTS: Record<string, number> = {
   extract: 5,
+  embeddings: 5,
+  prepare: 5,
   'dataset-query': 5,
   screenshot: 8,
   pdf: 8,
@@ -31,9 +33,11 @@ export const ADVANCED_CREDIT_COSTS: Record<string, number> = {
   browser: 10,
   crawl: 15,
   'ai-search': 15,
+  agent: 15,
   'rag-index': 15,
   research: 25,
   'deep-research': 60,
+  memory: 2,
 };
 
 export function getAdvancedCreditCost(operation: string, fallback = DEFAULT_SEARCH_CREDIT_COST): number {

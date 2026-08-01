@@ -17,6 +17,11 @@ import {
   RagIndexDto,
   RagQueryDto,
   BrowserNavigateDto,
+  AgentDto,
+  EmbeddingsDto,
+  PrepareContentDto,
+  MemoryStoreDto,
+  MemoryQueryDto,
 } from './dto/advanced.dto';
 
 @ApiTags('Advanced APIs')
@@ -126,5 +131,40 @@ export class AdvancedApiController {
   @ApiOperation({ summary: 'Browser API — navegação automatizada para agentes' })
   browserNavigate(@CurrentUser() user: AuthenticatedUser, @Body() dto: BrowserNavigateDto) {
     return this.advancedService.browserNavigate(user, dto);
+  }
+
+  @Post('agent')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Agent API — orquestra busca e síntese a partir de um goal' })
+  agent(@CurrentUser() user: AuthenticatedUser, @Body() dto: AgentDto) {
+    return this.advancedService.agent(user, dto);
+  }
+
+  @Post('embeddings')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Embeddings API — vetores para RAG' })
+  embeddings(@CurrentUser() user: AuthenticatedUser, @Body() dto: EmbeddingsDto) {
+    return this.advancedService.embeddings(user, dto);
+  }
+
+  @Post('prepare')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'AI-Ready Content — Markdown, chunks e embeddings' })
+  prepare(@CurrentUser() user: AuthenticatedUser, @Body() dto: PrepareContentDto) {
+    return this.advancedService.prepareContent(user, dto);
+  }
+
+  @Post('memory')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Memory API — armazenar contexto para agentes' })
+  storeMemory(@CurrentUser() user: AuthenticatedUser, @Body() dto: MemoryStoreDto) {
+    return this.advancedService.storeMemory(user, dto);
+  }
+
+  @Post('memory/query')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Memory API — recuperar contexto' })
+  getMemory(@CurrentUser() user: AuthenticatedUser, @Body() dto: MemoryQueryDto) {
+    return this.advancedService.getMemory(user, dto);
   }
 }

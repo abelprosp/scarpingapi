@@ -130,8 +130,11 @@ export const api = {
       body: JSON.stringify({ enabled }),
     }),
 
-  pixSubscribe: () =>
-    request<PixPayment>('/billing/pix/subscribe', { method: 'POST' }),
+  pixSubscribe: (tier: 'STARTER' | 'PRO' | 'ENTERPRISE' = 'STARTER') =>
+    request<PixPayment>('/billing/pix/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
+    }),
 
   pixBuyCredits: (quantity = 1) =>
     request<PixPayment>('/billing/pix/buy-credits', {

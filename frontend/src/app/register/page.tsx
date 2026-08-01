@@ -35,7 +35,7 @@ export default function RegisterPage() {
         <Link href="/" className="text-xl font-bold text-accent">{APP_NAME}</Link>
         <h1 className="mt-6 text-2xl font-bold">Criar conta</h1>
         <p className="mt-1 text-sm text-muted">
-          Ganhe <strong className="text-accent">2.700 créditos grátis</strong> ao se cadastrar.
+          Ganhe <strong className="text-accent">500 créditos grátis</strong> ao se cadastrar.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -80,7 +80,7 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full rounded-lg bg-accent py-3 font-semibold text-background disabled:opacity-50"
           >
-            {loading ? 'Criando...' : 'Criar conta — 2.700 créditos grátis'}
+            {loading ? 'Criando...' : 'Criar conta — 500 créditos grátis'}
           </button>
         </form>
 

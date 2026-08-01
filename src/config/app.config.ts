@@ -45,4 +45,5 @@ export const searchConfig = registerAs('search', () => ({
     process.env.PUPPETEER_EXECUTABLE_PATH ||
     undefined,
   aiEnabled: process.env.AI_ENABLED === 'true',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
 }));

@@ -92,7 +92,7 @@ model User {
   name          String?
   role          UserRole  @default(USER)
   emailVerified Boolean   @default(false) @map("email_verified")
-  credits               Int       @default(2700)
+  credits               Int       @default(500)
   payAsYouGoEnabled     Boolean   @default(false) @map("pay_as_you_go_enabled")
   monthlyCreditsUsed    Int       @default(0) @map("monthly_credits_used")
   monthlyCreditsResetAt DateTime? @map("monthly_credits_reset_at")

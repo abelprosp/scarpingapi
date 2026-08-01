@@ -40,11 +40,18 @@ export class PixBillingService {
     return this.configService.get<number>('billing.creditPackCredits', 500);
   }
 
-  async subscribePix(userId: string): Promise<PixPaymentResponse> {
+  async subscribePix(
+    userId: string,
+    tier: PlanTier = PlanTier.STARTER,
+  ): Promise<PixPaymentResponse> {
+    if (tier === PlanTier.FREE) {
+      throw new BadRequestException('Plano gratuito não requer pagamento');
+    }
+
     const plan = await this.prisma.plan.findFirst({
-      where: { tier: PlanTier.STARTER, isActive: true },
+      where: { tier, isActive: true },
     });
-    if (!plan) throw new NotFoundException('Plano mensal não encontrado');
+    if (!plan) throw new NotFoundException('Plano não encontrado');
 
     return this.createPayment({
       userId,

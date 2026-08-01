@@ -1,4 +1,4 @@
-# APIs Avançadas — Serper Platform
+# APIs Avançadas — NoviqSearch (Web Intelligence Platform)
 
 Base URL: `{BASE_URL}/api/v1`  
 Autenticação: `X-API-Key` ou `Authorization: Bearer {token}`  
@@ -13,14 +13,14 @@ Método: **POST** (exceto `/capabilities`)
 | Imagens / News / Vídeos | 3 |
 | Shopping / Reverse image | 4 |
 | Mapas / Locais | 5 |
-| Extract / Dataset query | 5 |
+| Extract / Embeddings / Prepare / Memory / Dataset query | 5 |
 | Screenshot / PDF / RAG query | 8 |
 | Browser | 10 |
-| Crawl / AI Search / RAG Index | 15 |
+| Crawl / AI Search / Agent / RAG Index | 15 |
 | Research | 25 |
 | Deep Research | 60 |
 
-**Cadastro:** 2.700 créditos grátis · **Plano Mensal:** R$ 197/mês · 70.000 créditos · **Avulso:** R$ 5/500 créditos
+**Cadastro:** 500 créditos grátis · **Starter R$ 39** · **Pro R$ 149** · **Business R$ 499** · **Avulso R$ 5/500**
 
 ---
 
@@ -36,7 +36,61 @@ Método: **POST** (exceto `/capabilities`)
 }
 ```
 
-Retorna: summary, keyFindings, sources[], sessionId
+Retorna: summary, keyFindings, timeline, people, companies, conclusions, sources[], sessionId
+
+---
+
+## Agent API
+`POST /agent`
+
+```json
+{
+  "goal": "Descobrir fornecedores de aço no Brasil",
+  "maxSteps": 3,
+  "gl": "br",
+  "hl": "pt"
+}
+```
+
+Retorna: plan, findings, summary, companies, conclusions, sources[]
+
+---
+
+## Embeddings API
+`POST /embeddings`
+
+```json
+{ "input": ["fornecedores de aço", "mercado brasileiro"] }
+```
+
+---
+
+## Prepare (AI-Ready Content)
+`POST /prepare`
+
+```json
+{
+  "url": "https://example.com/article",
+  "includeChunks": true,
+  "includeEmbeddings": false
+}
+```
+
+Retorna: title, author, summary, markdown, chunks, language, categories
+
+---
+
+## Memory API
+
+**Store:** `POST /memory`
+```json
+{ "key": "empresa-acme", "context": { "links": ["https://acme.com"], "notes": "fornecedor" } }
+```
+
+**Query:** `POST /memory/query`
+```json
+{ "key": "empresa-acme" }
+```
 
 ---
 
